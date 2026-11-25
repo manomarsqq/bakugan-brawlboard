@@ -1,0 +1,1896 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brawl Board Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Workbench layout: editor rail on the left, live board and AO3 code on the right; one column on phones. */
+:root {
+  --bg: #ecebf2;
+  --panel: #ffffff;
+  --panel-2: #f4f3f9;
+  --ink: #1c1a2b;
+  --muted: #5d5a75;
+  --line: #d8d5e6;
+  --accent: #7a3fc4;
+  --accent-ink: #ffffff;
+  --sel: #d99a00;
+  --ok: #1d7a3b;
+  --bad: #b3261e;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121019; --panel: #1b1824; --panel-2: #24202f; --ink: #ecebf4; --muted: #a8a3c0;
+    --line: #353047; --accent: #b98cff; --accent-ink: #121019; --sel: #ffd84a; --ok: #6fd38e; --bad: #ff8f85;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121019; --panel: #1b1824; --panel-2: #24202f; --ink: #ecebf4; --muted: #a8a3c0;
+  --line: #353047; --accent: #b98cff; --accent-ink: #121019; --sel: #ffd84a; --ok: #6fd38e; --bad: #ff8f85;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
+.page {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 16px;
+}
+
+/* ---------- Header ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.top h1 { margin: 0; font: 700 2.4rem/1 var(--f-display); letter-spacing: 0.01em; text-transform: uppercase; text-wrap: balance; }
+.top h1 span { color: var(--accent); }
+.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Panels ---------- */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.panel h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font: 700 1.35rem/1.1 var(--f-display); letter-spacing: 0.03em; text-transform: uppercase; }
+.panel h3 { margin: 0 0 10px; font: 700 1.1rem/1.1 var(--f-display); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.step-no { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 0.9em; }
+
+.skin-step { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 24px; align-items: start; }
+.skin-step ol { margin: 0; padding-left: 1.3em; }
+.skin-step ol li + li { margin-top: 2px; }
+.skin-step .actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+@media (max-width: 700px) { .skin-step { grid-template-columns: minmax(0, 1fr); } .skin-step .actions { flex-direction: row; flex-wrap: wrap; } }
+
+.work {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  grid-template-areas: "edit board" "edit code";
+  align-items: start;
+}
+.col-edit { grid-area: edit; display: grid; gap: 16px; min-width: 0; }
+.board-panel { grid-area: board; }
+.code-panel { grid-area: code; }
+@media (max-width: 900px) {
+  .work { grid-template-columns: minmax(0, 1fr); grid-template-areas: "board" "edit" "code"; }
+}
+
+/* ---------- Form controls ---------- */
+.field { display: grid; gap: 4px; margin-bottom: 12px; min-width: 0; align-content: start; }
+.field > label, .legend { font-weight: 700; font-size: 0.86rem; }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }
+.row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
+input[type="text"], input[type="number"], input[type="url"], select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+}
+textarea { resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.inline { display: flex; gap: 8px; }
+.inline input { flex: 1; min-width: 0; }
+
+.checks { display: grid; gap: 8px; margin-bottom: 12px; }
+.check { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; font-size: 0.92rem; cursor: pointer; }
+.check input { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--accent); }
+
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; justify-self: start; }
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 6px 12px; font-size: 0.9rem; font-weight: 600; background: var(--panel-2); }
+.seg label + label span { border-left: 1px solid var(--line); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-ink); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+.btn, .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 7px;
+  font: 600 0.92rem/1.2 var(--f-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); }
+.btn:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn-ghost:hover { border-color: var(--accent); }
+.btn-ghost.danger { color: var(--bad); }
+.btn-ghost:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+.btn-sm { padding: 4px 10px; font-size: 0.84rem; }
+
+.hint { margin: 0; font-size: 0.84rem; color: var(--muted); }
+.hint.ok { color: var(--ok); }
+.hint.bad { color: var(--bad); }
+.empty-note { margin: 0; color: var(--muted); }
+.zone-title { margin: 0 0 12px; padding: 6px 10px; border-left: 4px solid var(--sel); background: var(--panel-2); border-radius: 0 6px 6px 0; font-weight: 700; }
+.sub { margin: 4px 0 10px; padding-top: 10px; border-top: 1px solid var(--line); font-weight: 700; font-size: 0.86rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+.lookup-out { display: grid; gap: 6px; }
+.lookup-out:empty { display: none; }
+.results { display: grid; gap: 4px; max-height: 260px; overflow: auto; }
+.result {
+  display: flex; justify-content: space-between; gap: 8px; padding: 6px 9px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--ink);
+  font: inherit; font-size: 0.9rem; text-align: left; cursor: pointer;
+}
+.result span { color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
+.result:hover { border-color: var(--accent); }
+.lookup-out a, .hint a { color: var(--accent); }
+
+.pic-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.pic-row img { width: 56px; height: 56px; object-fit: contain; border-radius: 4px; border: 1px solid var(--line); background: var(--panel-2); }
+.pics { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; max-height: 300px; overflow: auto; margin: 4px 0 12px; }
+.pic-choice {
+  display: grid; gap: 3px; align-content: start; padding: 4px; min-width: 0;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--ink); cursor: pointer; font: inherit;
+}
+.pic-choice img { width: 100%; height: 64px; object-fit: contain; }
+.pic-choice span { font-size: 0.72rem; line-height: 1.2; color: var(--muted); overflow-wrap: anywhere; }
+.pic-choice:hover { border-color: var(--accent); }
+.pic-choice.on { border: 2px solid var(--accent); padding: 3px; }
+
+/* Lists in the brawler editor: one card or Bakugan per block */
+.items { display: grid; gap: 8px; margin-bottom: 8px; }
+.item { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.item-top { display: grid; grid-template-columns: minmax(0, 1fr) 104px 74px; gap: 6px; align-items: center; }
+.item-top.bk { grid-template-columns: minmax(0, 1fr) 120px 74px auto; }
+.item input, .item select { padding: 6px 7px; font-size: 0.88rem; background: var(--panel); }
+.item .item-no { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+@media (max-width: 440px) { .item-top, .item-top.bk { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+/* ---------- Preview ---------- */
+.board-panel .hint { margin-bottom: 8px; }
+.preview { min-width: 0; }
+.preview .bkg-brawl { margin-top: 0; }
+#workskin [data-bk], #workskin [data-gate], #workskin [data-br], #workskin [data-msg] { cursor: pointer; }
+#workskin .is-sel { outline: 3px solid var(--sel); outline-offset: 2px; border-radius: 6px; }
+#workskin [data-bk]:focus-visible, #workskin [data-gate]:focus-visible, #workskin [data-br]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bkg-add { display: block; padding-top: 0.6em; color: rgba(255, 255, 255, 0.85); font: 700 0.9em/1.2 var(--f-body); }
+
+/* ---------- Code output ---------- */
+.code-panel ol { margin: 0 0 12px; padding-left: 1.3em; }
+.code-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.status { font-size: 0.86rem; color: var(--ok); font-weight: 600; }
+textarea.code { height: 220px; font: 0.78rem/1.45 var(--f-mono); white-space: pre; overflow: auto; }
+details { margin-top: 12px; }
+summary { cursor: pointer; font-weight: 700; }
+details[open] summary { margin-bottom: 8px; }
+.log-preview .bkg-log { margin: 0 0 10px; }
+</style>
+</head>
+<body>
+
+
+<script type="text/plain" id="skin-css">/* =====================================================================
+   BAKUGAN BRAWL BOARD — AO3 Work Skin
+
+   HOW TO INSTALL
+   AO3 Dashboard → Skins → My Work Skins → Create Work Skin, paste this
+   whole file, save. Then on your work's Edit page pick it under
+   "Select Work Skin". AO3 quietly adds "#workskin" in front of every
+   rule, so these styles only ever touch your own story.
+
+   HOW TO READ THIS FILE (a 30-second CSS primer)
+   - Anything between slash-star and star-slash, like this text, is a
+     comment. The browser ignores it; it's only here for you.
+   - A rule looks like:   .bkg-gate { color: red; }
+       .bkg-gate   = "every element whose class is bkg-gate"
+                     (in the HTML that's  class="bkg-gate")
+       { ... }     = the list of looks to give those elements
+       color: red; = one look: a "property" and its "value"
+   - ".bkg-back .bkg-sum" (two names with a space) means "a bkg-sum that
+     sits INSIDE a bkg-back". ".bkg-gate.bkg-back" (no space) means "one
+     element that has BOTH classes".
+   - Every class here starts with "bkg-" so it can't clash with AO3's
+     own class names.
+
+   UNITS: em = one letter-height, so the whole board grows and shrinks
+   with the reader's text size. % = a share of the space available.
+   px = a fixed screen pixel, used only for thin lines.
+
+   Many rules set "background" twice: first a plain colour, then a
+   gradient. Browsers use the last one they understand, so the plain
+   colour is a safety net.
+
+   WHAT'S WHERE ON THE BOARD
+     opponents' strip:  their hand of cards | their plate (name + Bakugan)
+     the field:         a table with one column per Gate Card space:
+                          row 1: opponents' Bakugan standing on that card
+                          row 2: the Gate Card
+                          row 3: heroes' Bakugan standing on that card
+     heroes' strip:     their plate | their hand of cards
+     battle meter, then the message box (both optional)
+   ===================================================================== */
+
+
+/* =====================================================================
+   1. THE FRAME
+   The dark box around everything. In the HTML it's the outermost
+   <div class="bkg-brawl">.
+   ===================================================================== */
+.bkg-brawl {
+  margin: 1.5em auto;               /* space above/below; "auto" centres it */
+  max-width: 42em;                  /* never wider than this on big screens */
+  padding: 0.5em;
+  background: #1c1733;
+  background: linear-gradient(#2a2150, #120e22);
+  border: 3px solid #0b0916;
+  border-radius: 0.7em;
+  color: #fff;
+  font-family: "Trebuchet MS", "Segoe UI", Verdana, Arial, sans-serif;
+  line-height: 1.25;
+  text-align: left;
+  position: relative;               /* the hover info panels (section 10) are placed against this box */
+}
+
+/* AO3 sometimes slips extra line breaks (<br>) and paragraphs (<p>) into
+   pasted HTML. These rules make them harmless inside the board and the
+   log box, so they can't break the layout. */
+.bkg-brawl br, .bkg-log br { display: none; }
+.bkg-brawl p, .bkg-log p { display: inline; margin: 0; padding: 0; }
+
+/* AO3 gives tables its own borders and backgrounds; switch those off. */
+.bkg-strip, .bkg-field, .bkg-vs-t { margin: 0; border: none; background: none; }
+.bkg-strip td, .bkg-field td, .bkg-vs-t td { border: none; background: none; }
+
+/* Secret card names (cards still in a hand, or set face-down) are kept
+   in the HTML so the builder can read the board back in, but readers
+   never see them. Leave a card's name empty to keep it out entirely. */
+.bkg-secret { display: none; }
+
+
+/* =====================================================================
+   2. BADGES
+   The row at the top right: the place, the Doom Card, the round.
+   ===================================================================== */
+.bkg-badges { margin: 0 0 0.3em; text-align: right; }
+.bkg-badge {
+  display: inline-block;
+  margin: 0.1em 0 0.1em 0.3em;
+  padding: 0.1em 0.55em;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1em;
+  color: #fff;
+  font-size: 0.78em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.bkg-doom { background: #2a0a33; border-color: #b04ad6; color: #f2c6ff; }   /* a Doom Card is set */
+.bkg-round { background: #f3eefc; border-color: #8a7ab0; color: #4a2a8a; }
+
+
+/* =====================================================================
+   3. BRAWLER STRIPS: PLATE AND HAND
+   Each brawler gets a one-row table: plate on one side, hand of cards on
+   the other. The opponents' strips sit above the field with the plate
+   on the right; the heroes' sit below it with the plate on the left.
+   In a tag battle the partner's strip sits on the outside.
+   ===================================================================== */
+.bkg-strip { width: 100%; border-collapse: collapse; border-spacing: 0; margin: 0.15em 0; }
+.bkg-strip td { padding: 0.15em 0.2em; vertical-align: middle; }
+.bkg-strip td.bkg-plate-c { width: 1%; white-space: nowrap; }      /* the plate takes only the room it needs */
+.bkg-strip-opp td.bkg-hand-c { text-align: right; }
+
+/* The plate: name, the Bakugan balls, how many are left. Its border is
+   the brawler's colour (section 4). */
+.bkg-plate {
+  display: inline-block;
+  min-width: 7em;
+  padding: 0.25em 0.6em 0.35em;
+  background: #241d3e;
+  border: 2px solid #8a8a8a;
+  border-radius: 0.4em;
+  box-shadow: 0 0.15em 0.3em rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+.bkg-pname { display: block; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; text-shadow: 1px 1px 0 #000; }
+.bkg-balls { display: inline-block; white-space: nowrap; vertical-align: middle; }
+.bkg-left { margin-left: 0.4em; color: #d8d0f0; font-size: 0.75em; font-weight: bold; vertical-align: middle; }
+
+/* One Bakugan ball. Its colour is its attribute (section 8); its state:
+   bkg-s-hand = ready, bkg-s-field = standing on the field (white ring),
+   bkg-s-out = defeated (greyed), bkg-s-doom = lost to the Doom Dimension. */
+.bkg-ball {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.16em;
+  border: 1px solid #000;
+  border-radius: 50%;
+  background: #8a8a8a;
+  font-size: 1em;
+  line-height: 0.95em;
+  vertical-align: middle;
+  cursor: pointer;                  /* tells phones it can be tapped for its info panel */
+}
+.bkg-s-field { box-shadow: 0 0 0 2px #fff; }
+.bkg-s-out { opacity: 0.3; }
+.bkg-s-doom { background: #120016; background: radial-gradient(circle, #6a1a7a, #050008); border-color: #b04ad6; opacity: 0.7; }
+
+/* The hand: small cards in a row, with a count. */
+.bkg-hand { display: inline-block; white-space: normal; }
+.bkg-mini {
+  display: inline-block;
+  margin: 0.1em 0.08em;
+  vertical-align: middle;
+  border-radius: 0.15em;
+  box-shadow: 0 0.1em 0.2em rgba(0, 0, 0, 0.5);
+  font-size: 1em;
+  line-height: 1;
+  cursor: pointer;
+}
+/* Gate Cards are square; Ability Cards are upright. */
+.bkg-gc { width: 1.5em; height: 1.5em; }
+.bkg-ab { width: 1.1em; height: 1.6em; }
+/* Face-down (still in the hand). */
+.bkg-gc.bkg-back { background: #3a2a10; background: radial-gradient(circle, #ffd86b 0, #d28a1c 30%, #5a3a10 34%, #2a1c08 100%); border: 1px solid #f0c050; }
+.bkg-ab.bkg-back { background: #3a0f22; background: linear-gradient(135deg, #8a2a4a, #2a0a18); border: 1px solid #e07a9a; }
+/* Face-up in the hand: an activated Ability Card glows; a used card is faded. */
+.bkg-ab.bkg-active { border: 1px solid #fff; box-shadow: 0 0 0 0.12em #ffd84a, 0 0 0.5em #ffd84a; }
+.bkg-used { opacity: 0.4; border: 1px solid rgba(255, 255, 255, 0.5); }
+.bkg-hand-label {
+  display: inline-block;
+  margin: 0 0.4em;
+  padding: 0.1em 0.5em;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 1em;
+  font-size: 0.72em;
+  font-weight: bold;
+  vertical-align: middle;
+}
+
+
+/* =====================================================================
+   4. BRAWLER COLOURS
+   bkg-c0 = the opponent (red), bkg-c1 = the opponent's partner (purple),
+   bkg-c2 = the hero (blue), bkg-c3 = the hero's partner (gold). In a
+   battle royale every brawler keeps their own colour.
+   ===================================================================== */
+.bkg-plate.bkg-c0 { border-color: #e0524a; }
+.bkg-plate.bkg-c1 { border-color: #a964d6; }
+.bkg-plate.bkg-c2 { border-color: #4f86e8; }
+.bkg-plate.bkg-c3 { border-color: #e0a82e; }
+.bkg-own.bkg-c0 { color: #ff9a92; }
+.bkg-own.bkg-c1 { color: #d6a8f5; }
+.bkg-own.bkg-c2 { color: #9cc0ff; }
+.bkg-own.bkg-c3 { color: #ffd27a; }
+
+
+/* =====================================================================
+   5. THE FIELD
+   A table with one column per Gate Card space (bkg-g1 … bkg-g6 says how
+   many). AO3 leaves tables alone, so the layout can't fall apart.
+   ===================================================================== */
+/* Lets the field scroll sideways on very narrow phones instead of squashing. */
+.bkg-scroll { overflow: auto; margin: 0.25em 0; }
+
+.bkg-field {
+  width: 100%;
+  min-width: 20em;                  /* below this the field scrolls sideways */
+  table-layout: fixed;              /* every column the same width */
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #3a2a78;
+  border: 2px solid #0b0916;
+  border-radius: 0.45em;
+}
+.bkg-g5, .bkg-g6 { min-width: 30em; }
+.bkg-field td { padding: 0.3em 0.2em; text-align: center; }
+.bkg-row-opp td { vertical-align: bottom; height: 5.5em; }      /* the opponents' Bakugan stand just above their card */
+.bkg-row-me td { vertical-align: top; height: 5.5em; }          /* the heroes' just below it */
+.bkg-row-gate td { vertical-align: middle; }
+
+/* Backgrounds. Pick one class on the bkg-field table. */
+.bkg-bg-arena { background: #3a2a78; background: linear-gradient(#24184f, #5a3fa8 50%, #24184f); }
+.bkg-bg-vestroia { background: #6a2a5a; background: linear-gradient(#3a1250, #c0562a 50%, #3a1250); }
+.bkg-bg-park { background: #3f7a32; background: linear-gradient(#6fb0e0, #8fc66a 45%, #4f8a3a 55%, #2f6026); }
+.bkg-bg-city { background: #5b6169; background: linear-gradient(#7fa3c8, #a8b0ba 45%, #7c838c 55%, #4b5159); }
+.bkg-bg-desert { background: #c49a5a; background: linear-gradient(#f2b766, #ecc993 45%, #d5a66a 55%, #a5743a); }
+.bkg-bg-ice { background: #9ec4e0; background: linear-gradient(#d6ecfa, #a8d0ee 45%, #7eb0d8 55%, #4a80b0); }
+.bkg-bg-doom { background: #120016; background: radial-gradient(circle, #4a1a5a, #0a0010 70%); }
+
+/* An empty Gate Card space: a faint square outline. */
+.bkg-zone {
+  display: block;
+  width: 4.6em;
+  max-width: 92%;
+  height: 4.6em;
+  margin: 0 auto;
+  border: 0.15em dashed rgba(255, 255, 255, 0.4);
+  border-radius: 0.4em;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+
+/* =====================================================================
+   6. GATE CARDS ON THE FIELD
+   A square card. Add bkg-back while it's face-down; once it's open it
+   shows its type and name, coloured by type (section 9). bkg-battle
+   makes it glow: the battle is on this card.
+   ===================================================================== */
+.bkg-gate {
+  display: block;
+  width: 4.6em;
+  max-width: 92%;
+  min-height: 4.6em;
+  margin: 0 auto;
+  padding: 0.3em;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #4a4a5a;
+  border: 0.15em solid #f0c050;
+  border-radius: 0.4em;
+  box-shadow: 0 0.15em 0.35em rgba(0, 0, 0, 0.55);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+}
+.bkg-gate.bkg-back { background: #3a2a10; background: radial-gradient(circle, #ffe08a 0, #d28a1c 22%, #5a3a10 26%, #3a2608 55%, #1e1405 100%); }
+.bkg-gtype { display: block; font-size: 0.6em; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+.bkg-gname { display: block; margin-top: 0.15em; font-size: 0.8em; font-weight: bold; line-height: 1.15; overflow-wrap: break-word; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6); }
+td.bkg-battle .bkg-gate, td.bkg-battle .bkg-zone { box-shadow: 0 0 0 0.18em #ffd84a, 0 0 1em 0.3em rgba(255, 200, 40, 0.8); }
+.bkg-battle-tag { display: block; margin-top: 0.2em; color: #ffd84a; font-size: 0.62em; font-weight: bold; letter-spacing: 0.1em; text-shadow: 1px 1px 0 #000; }
+
+
+/* =====================================================================
+   7. BAKUGAN ON THE FIELD
+   A standing Bakugan: its picture (an <img>, or a coloured ball when
+   there's no picture), its G-Power, and in a tag battle or battle
+   royale its brawler's name. Two can share a card side by side.
+   ===================================================================== */
+.bkg-bk {
+  display: inline-block;
+  max-width: 45%;
+  margin: 0 0.1em;
+  vertical-align: bottom;
+  text-align: center;
+  cursor: pointer;                  /* tells phones it can be tapped (section 10) */
+}
+.bkg-row-me .bkg-bk { vertical-align: top; }
+.bkg-bk img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.bkg-bk img.bkg-flip { transform: scaleX(-1); }   /* mirror the picture */
+/* Stand-in ball when a Bakugan has no picture. */
+.bkg-orb { display: block; width: 2.6em; height: 2.6em; margin: 0 auto 0.15em; border: 2px solid #000; border-radius: 50%; background: #8a8a8a; }
+/* The G-Power badge. bkg-gd is the change from its base power. */
+.bkg-gp {
+  display: inline-block;
+  margin-top: 0.1em;
+  padding: 0.05em 0.45em;
+  background: #120e22;
+  border: 1px solid #ffd84a;
+  border-radius: 0.8em;
+  color: #ffd84a;
+  font-size: 0.78em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.bkg-gd { margin-left: 0.25em; color: #7ef08a; font-size: 0.85em; }
+.bkg-gd-down { color: #ff8a80; }
+.bkg-own { display: block; font-size: 0.62em; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; text-shadow: 1px 1px 0 #000; }
+/* Golden glow on the Bakugan the scene is about. */
+.bkg-focus img, .bkg-focus .bkg-orb { outline: 0.15em solid #ffd84a; outline-offset: 0.1em; border-radius: 0.4em; }
+
+
+/* =====================================================================
+   8. ATTRIBUTE COLOURS
+   bkg-a-... colours a Bakugan ball, an Ability Card and the attribute
+   tags. Light colours get dark text so they stay readable.
+   ===================================================================== */
+.bkg-a-pyrus { background: #d63a2a; background: radial-gradient(circle at 35% 30%, #ff8a6a, #d63a2a 45%, #7a1208); }
+.bkg-a-aquos { background: #2d7fd6; background: radial-gradient(circle at 35% 30%, #8ac8ff, #2d7fd6 45%, #0f3a7a); }
+.bkg-a-subterra { background: #b5702a; background: radial-gradient(circle at 35% 30%, #f0b06a, #b5702a 45%, #5a3208); }
+.bkg-a-haos { background: #e8c93a; background: radial-gradient(circle at 35% 30%, #fffbe0, #e8c93a 45%, #8a6a08); color: #2a2200; text-shadow: none; }
+.bkg-a-darkus { background: #5a2f7a; background: radial-gradient(circle at 35% 30%, #b07ad6, #5a2f7a 45%, #1e0a2e); }
+.bkg-a-ventus { background: #2f9e4a; background: radial-gradient(circle at 35% 30%, #9af0a0, #2f9e4a 45%, #0a4a1a); }
+
+
+/* =====================================================================
+   9. GATE CARD TYPES
+   The colour of an open Gate Card, and of its type tag in the info panel.
+   ===================================================================== */
+.bkg-t-command { background: #6b3fa0; }
+.bkg-t-character { background: #c0561e; }
+.bkg-t-normal { background: #2a7a8a; }
+.bkg-t-gold { background: #b08a1a; background: linear-gradient(#e8c24a, #8a6a10); }
+.bkg-t-silver { background: #8a90a0; background: linear-gradient(#d0d4dc, #6a7080); }
+.bkg-t-bronze { background: #9a5a2a; background: linear-gradient(#d0905a, #6a3a14); }
+.bkg-t-none { background: #4a4a5a; }
+
+
+/* =====================================================================
+   10. HOVER INFO PANELS
+   AO3 doesn't allow scripts, so each Bakugan, ball and face-up card
+   carries its own hidden info panel (bkg-sum). Pointing at it (or
+   tapping it on a phone) shows the panel along the bottom of the board.
+   ===================================================================== */
+.bkg-sum {
+  display: none;                    /* hidden until pointed at */
+  position: absolute;               /* placed against the whole board (.bkg-brawl) */
+  left: 0.5em;
+  right: 0.5em;
+  bottom: 0.5em;
+  z-index: 9;
+  padding: 0.5em 0.8em 0.6em;
+  background: #1e1838;
+  background: linear-gradient(#2e2556, #15102a);
+  border: 3px solid #ffd84a;
+  border-radius: 0.45em;
+  box-shadow: 0 0.2em 0.8em rgba(0, 0, 0, 0.6);
+  color: #f2f0fa;
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  text-shadow: none;
+  white-space: normal;
+  opacity: 1;
+  cursor: default;
+}
+.bkg-bk:hover .bkg-sum, .bkg-ball:hover .bkg-sum, .bkg-mini:hover .bkg-sum, .bkg-gate:hover .bkg-sum { display: block; }
+.bkg-sum-pic { float: right; max-width: 30%; height: auto; margin: 0 0 0.3em 0.6em; }
+.bkg-sum-head { display: block; font-size: 1.1em; font-weight: bold; }
+.bkg-sum-name { color: #ffd84a; text-shadow: 1px 1px 0 #000; }
+.bkg-sum-line { display: block; }
+.bkg-k { margin-right: 0.25em; color: #c8b0ff; font-size: 0.78em; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; }
+.bkg-sum-abs { display: block; margin-top: 0.15em; }
+.bkg-sum-text { display: block; margin-top: 0.3em; font-style: italic; }
+/* Attribute and type tags, and ability chips. */
+.bkg-at, .bkg-gt, .bkg-mv {
+  display: inline-block;
+  margin: 0.15em 0.2em 0 0;
+  padding: 0.05em 0.5em;
+  border-radius: 0.5em;
+  background: #5a5a6a;
+  color: #fff;
+  font-size: 0.72em;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+  vertical-align: middle;
+}
+.bkg-at, .bkg-gt { text-transform: uppercase; }
+.bkg-mv { font-size: 0.85em; }
+
+
+/* =====================================================================
+   11. BATTLE METER (optional)
+   Under the field: the Bakugan battling on one Gate Card, each side's
+   total G-Power, and a bar showing who's ahead (the left side's share
+   of the total, bkg-w0 … bkg-w100). Then what the open Gate Card and
+   any activated Ability Cards do.
+   ===================================================================== */
+.bkg-vs {
+  display: block;
+  margin: 0.35em 0 0;
+  padding: 0.4em 0.6em 0.5em;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 216, 74, 0.6);
+  border-radius: 0.45em;
+}
+.bkg-vs-t { width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; }
+.bkg-vs-t td { padding: 0.1em 0.2em; vertical-align: middle; font-weight: bold; }
+.bkg-vs-t td.bkg-vs-x { width: 2.4em; text-align: center; color: #ffd84a; font-size: 0.85em; }
+.bkg-vs-t td.bkg-vs-r { text-align: right; }
+.bkg-vs-n { display: block; font-size: 0.85em; }
+.bkg-vs-g { display: block; color: #ffd84a; font-size: 1.3em; text-shadow: 1px 1px 0 #000; }
+.bkg-meter { display: block; height: 8px; margin: 0.3em 0 0.2em; overflow: hidden; background: #4f86e8; border: 1px solid #000; border-radius: 0.3em; font-size: 0; line-height: 0; }
+.bkg-meter-fill { display: block; height: 8px; background: #e0524a; }
+.bkg-vs-line { display: block; margin-top: 0.2em; font-size: 0.85em; }
+.bkg-vs-line .bkg-k { color: #ffd84a; }
+
+
+/* =====================================================================
+   12. MESSAGE BOX (optional)
+   The shout under the board ("Gate Card, open!"). Each bkg-line is one line.
+   ===================================================================== */
+.bkg-msg {
+  display: block;
+  margin: 0.4em 0 0;
+  padding: 0.5em 0.85em;
+  background: #f6f3ff;
+  border: 3px solid #7a4fd0;
+  border-radius: 0.45em;
+  box-shadow: inset 0 0 0 2px #d6c8f8;
+  color: #2a2244;
+  font-size: 1.05em;
+  font-weight: bold;
+  line-height: 1.35;
+}
+.bkg-line { display: block; }
+
+
+/* =====================================================================
+   13. BATTLE LOG LINE
+   A message box for the story between boards: what happened, and the
+   G-Power change. bkg-delta is the green "+100"; add bkg-log-down to the
+   box to make it red for a loss of power.
+   ===================================================================== */
+.bkg-log {
+  display: block;
+  max-width: 42em;
+  margin: 1em auto;
+  padding: 0.5em 0.85em;
+  background: #f6f3ff;
+  border: 3px solid #7a4fd0;
+  border-radius: 0.45em;
+  box-shadow: inset 0 0 0 2px #d6c8f8;
+  color: #2a2244;
+  font-family: "Trebuchet MS", "Segoe UI", Verdana, Arial, sans-serif;
+  font-weight: bold;
+  line-height: 1.4;
+  text-align: left;
+}
+.bkg-log-g { display: block; margin-top: 0.3em; padding-top: 0.3em; border-top: 1px dashed #c0b0e8; color: #4a4466; font-size: 0.9em; }
+.bkg-delta { margin-left: 0.4em; color: #1f9a3a; }
+.bkg-log-down .bkg-delta { color: #d0342c; }
+
+
+/* =====================================================================
+   14. METER WIDTHS
+   How much of the battle meter the left side fills: the left side's
+   G-Power ÷ both sides' total × 100, rounded. 820 against 800 → bkg-w51.
+   (AO3 doesn't allow per-element styles, so we need one class per size.)
+   ===================================================================== */
+</script>
+
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Brawl Board <span>Builder</span></h1>
+      <p>Build a Bakugan brawl board for your AO3 fic by clicking and typing. No code to write: copy the result into your chapter.</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="btn-ghost" id="example-btn">Load the example brawl</button>
+      <button type="button" class="btn-ghost danger" id="clear-btn">Clear the brawl</button>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="skin-h">
+    <h2 id="skin-h"><span class="step-no">1</span> Install the Work Skin (once)</h2>
+    <div class="skin-step">
+      <ol>
+        <li>On AO3, go to <b>Dashboard → Skins → My Work Skins → Create Work Skin</b>.</li>
+        <li>Give it any title, paste the Work Skin into the <b>CSS</b> box, and submit.</li>
+        <li>On your fic's <b>Edit</b> page, pick it under <b>Select Work Skin</b> and post.</li>
+      </ol>
+      <div class="actions">
+        <button type="button" class="btn" id="copy-skin">Copy the Work Skin</button>
+        <span class="status" id="skin-status" aria-live="polite"></span>
+      </div>
+    </div>
+    <details>
+      <summary>Show the Work Skin code</summary>
+      <textarea class="code" id="skin-out" readonly spellcheck="false" aria-label="Work Skin CSS"></textarea>
+    </details>
+  </section>
+
+  <div class="work">
+    <div class="col-edit">
+      <section class="panel" id="ed-panel" aria-labelledby="ed-h">
+        <h2 id="ed-h"><span class="step-no">2</span> <span id="ed-title">Edit the board</span></h2>
+        <div id="editor"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="br-h">
+        <h3 id="br-h">Brawlers</h3>
+        <div id="brawlers"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="field-h">
+        <h3 id="field-h">Field</h3>
+        <div class="row2">
+          <div class="field"><label for="gates">Gate Card spaces</label><select id="gates" data-p="gates"></select></div>
+          <div class="field"><label for="scene">Background</label><select id="scene" data-p="scene"></select></div>
+          <div class="field"><label for="round">Round (0 hides it)</label><input type="number" id="round" min="0" max="999" data-p="round"></div>
+          <div class="field"><span class="legend">&nbsp;</span><label class="check"><input type="checkbox" id="doom" data-p="doom"><span>A Doom Card is set</span></label></div>
+        </div>
+        <div class="field"><label for="field-note">Place and other badges</label><input type="text" id="field-note" data-p="fieldNote" placeholder="Bakugan Interspace, Frozen time"><p class="hint">Each one becomes a badge at the top. Put a comma between them.</p></div>
+        <div class="field"><label for="battle-at">Battle on</label><select id="battle-at" data-p="battleAt"></select><p class="hint">The Gate Card glows, and a meter under the field compares the Bakugan on it.</p></div>
+      </section>
+
+      <section class="panel" aria-labelledby="msg-h">
+        <h3 id="msg-h">Message box</h3>
+        <div class="field"><label for="msg">Message (each line on its own line; empty hides the box)</label><textarea id="msg" rows="2" data-p="msg"></textarea></div>
+        <p class="hint" style="margin-bottom:6px">Add a line:</p>
+        <div class="btn-row">
+          <button type="button" class="btn-ghost btn-sm" data-say="set">Gate Card, set!</button>
+          <button type="button" class="btn-ghost btn-sm" data-say="brawl">Bakugan, brawl!</button>
+          <button type="button" class="btn-ghost btn-sm" data-say="stand">Bakugan, stand!</button>
+          <button type="button" class="btn-ghost btn-sm" data-say="open">Gate Card, open!</button>
+          <button type="button" class="btn-ghost btn-sm" data-say="ability">Ability, activate!</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="log-h">
+        <h3 id="log-h">Battle log line (optional)</h3>
+        <p class="hint" style="margin-bottom:10px">A message box for the story between boards.</p>
+        <div class="field"><label for="log-text">What happened</label><input type="text" id="log-text" data-l="text"></div>
+        <div class="row2">
+          <div class="field"><label for="log-target">Whose G-Power changes</label><select id="log-target" data-l="target"></select></div>
+          <div class="field"><label for="log-delta">Change (+100, −50)</label><input type="number" id="log-delta" data-l="delta"></div>
+          <div class="field"><label for="log-out">And then</label>
+            <select id="log-out" data-l="outcome">
+              <option value="">Nothing more</option>
+              <option value="win">It wins the battle</option>
+              <option value="out">It is defeated</option>
+              <option value="doom">It’s sent to the Doom Dimension</option>
+            </select>
+          </div>
+        </div>
+        <div class="log-preview" id="workskin-log"><div id="log-preview"></div></div>
+        <div class="code-bar">
+          <button type="button" class="btn" id="copy-log">Copy log line</button>
+          <button type="button" class="btn-ghost" id="apply-log">Apply to the board</button>
+          <span class="status" id="log-status" aria-live="polite"></span>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel board-panel" aria-labelledby="board-h">
+      <h2 id="board-h">Live preview</h2>
+      <p class="hint">Click a Bakugan or one of its balls to edit it, a Gate Card space to set a card there, or a brawler’s name or hand to edit their cards. Point at anything to see its info panel, just like readers will.</p>
+      <div id="workskin" class="preview"><div id="preview"></div></div>
+    </section>
+
+    <section class="panel code-panel" aria-labelledby="code-h">
+      <h2 id="code-h"><span class="step-no">3</span> Copy into your chapter</h2>
+      <ol>
+        <li>In your chapter's editor on AO3, switch to <b>HTML</b> (not Rich Text).</li>
+        <li>Paste the board where you want it in the story, then preview or post.</li>
+      </ol>
+      <div class="code-bar">
+        <button type="button" class="btn" id="copy-board">Copy board code</button>
+        <span class="status" id="board-status" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="board-out" readonly spellcheck="false" aria-label="Board code for AO3"></textarea>
+      <details id="load-box">
+        <summary>Edit a board you made before</summary>
+        <p class="hint" style="margin-bottom:8px">Paste a board's code here (for example, copied back out of your chapter's HTML) to keep editing it, such as for the next round.</p>
+        <textarea id="load-in" rows="5" spellcheck="false" aria-label="Board code to load"></textarea>
+        <div class="code-bar" style="margin-top:8px">
+          <button type="button" class="btn" id="load-btn">Load this board</button>
+          <span class="hint" id="load-status" aria-live="polite"></span>
+        </div>
+      </details>
+      <p class="hint" style="margin-top:12px">Your board is saved in this browser as you work. The names of cards still in a hand or set face-down are hidden from readers, but stay in the board's HTML so you can load it back; leave a name empty to keep it out. Bakugan and card details and pictures come from the <a href="https://bakugan.fandom.com/" target="_blank" rel="noopener">Bakugan Wiki</a> on Fandom; its text is shared under CC BY-SA.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s, el) { return (el || document).querySelector(s); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+  var clampInt = function (v, lo, hi) { var n = parseInt(v, 10); if (isNaN(n)) n = lo; return Math.max(lo, Math.min(hi, n)); };
+  var cap = function (s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; };
+  var each = function (list, fn) { Array.prototype.forEach.call(list, fn); };
+  var numOrBlank = function (v) { if (v === "" || v == null) return ""; var n = parseInt(v, 10); return isNaN(n) ? "" : Math.max(0, Math.min(99999, n)); };
+
+  /* ---------- Vocabulary ---------- */
+  var ATTRS = ["pyrus", "aquos", "subterra", "haos", "darkus", "ventus"];
+  var BK_STATUS = [["hand", "Ready"], ["field", "On the field"], ["out", "Defeated"], ["doom", "Doom Dimension"]];
+  var GC_STATE = [["hand", "In hand"], ["set", "Set"], ["open", "Open"], ["used", "Used"]];
+  var AB_STATE = [["hand", "In hand"], ["active", "Activated"], ["used", "Used"]];
+  var GC_TYPES = [["", "–"], ["command", "Command"], ["character", "Character"], ["normal", "Normal"], ["gold", "Gold"], ["silver", "Silver"], ["bronze", "Bronze"]];
+  var TYPE_NAME = {}; GC_TYPES.forEach(function (t) { TYPE_NAME[t[0]] = t[1]; });
+  var SCENES = [["arena", "Brawl arena"], ["vestroia", "Vestroia"], ["park", "Park"], ["city", "City"], ["desert", "Desert"], ["ice", "Ice"], ["doom", "Doom Dimension"]];
+  var MODES = [["single", "One on one"], ["tag", "Tag battle"], ["royale", "Battle royale"]];
+  var SAY = { set: "Gate Card, set!", brawl: "Bakugan, brawl!", stand: "Bakugan, stand!", open: "Gate Card, open!", ability: "Ability, activate!" };
+  var COLOR_NAME = ["red", "purple", "blue", "gold"];
+  /* How wide a Bakugan's picture is drawn at "Normal" size. */
+  var BASEW = 92;
+
+  function newBakugan() { return { name: "", page: "", attr: "", base: "", g: "", status: "hand", at: 0, pic: "", pics: [], size: 100, flip: false, known: [], abil: "", notes: "", focus: false }; }
+  function newGate() { return { name: "", type: "", effect: "", state: "hand", at: 0 }; }
+  function newAbility() { return { name: "", attr: "", effect: "", state: "hand" }; }
+  function newBrawler(name) {
+    return { name: name, bakugan: [newBakugan(), newBakugan(), newBakugan()], gates: [newGate(), newGate(), newGate()], abilities: [newAbility(), newAbility(), newAbility()] };
+  }
+  function emptyState() {
+    return { v: 1, mode: "single", royaleN: 4, gates: 3, scene: "arena", doom: false, fieldNote: "", round: 0, battleAt: -1, msg: "",
+      brawlers: [newBrawler("Rival"), newBrawler("Rival’s partner"), newBrawler("Hero"), newBrawler("Hero’s partner")],
+      log: { text: "", target: "2-0", delta: 0, outcome: "" } };
+  }
+
+  /* The example: a tag battle on a Quartet Battle card, filled in from the wiki so it works without a lookup. */
+  var IMG = "https://static.wikia.nocookie.net/bakugan/images/";
+  function exampleState() {
+    var s = emptyState();
+    s.mode = "tag"; s.gates = 4; s.scene = "arena"; s.doom = true; s.battleAt = 1;
+    var bk = function (o) { return Object.assign(newBakugan(), o); };
+    var gc = function (o) { return Object.assign(newGate(), o); };
+    var ab = function (o) { return Object.assign(newAbility(), o); };
+    var QUARTET = "Prevents the battle from starting until four Bakugan are on the card.";
+    s.brawlers[0] = { name: "Masquerade",
+      bakugan: [bk({ name: "Hydranoid", page: "Hydranoid (Generation 1)", attr: "darkus", base: 450, g: 450, status: "field", at: 1, pic: IMG + "b/b4/5f0f7d9d094ff107_bk_hydranoid.png",
+        abil: "Chaos of Darkness, Darkus Gravity", notes: "Masquerade’s Guardian Bakugan." }), bk({ status: "out" }), bk({})],
+      gates: [gc({ name: "Quartet Battle", type: "command", effect: QUARTET, state: "open", at: 1 }), gc({}), gc({})],
+      abilities: [ab({}), ab({}), ab({ name: "Darkus Gravity", attr: "darkus", effect: "Adds another Darkus Bakugan to the battle.", state: "used" })] };
+    s.brawlers[1] = { name: "Chan Lee",
+      bakugan: [bk({ name: "Fourtress", page: "Fourtress", attr: "pyrus", base: 370, g: 370, status: "field", at: 1, pic: IMG + "b/b5/BK_CD_Fortress.jpg", abil: "Face of Grief, Face of Rage" }), bk({}), bk({ status: "out" })],
+      gates: [gc({ state: "set", at: 3 }), gc({}), gc({})],
+      abilities: [ab({}), ab({}), ab({})] };
+    s.brawlers[2] = { name: "Dan",
+      bakugan: [bk({ name: "Dragonoid", page: "Dragonoid (Generation 1)", attr: "pyrus", base: 340, g: 440, status: "field", at: 1, pic: IMG + "2/29/Dragonoid.png", focus: true,
+        abil: "Boosted Dragon, Fire Wall, Fire Tornado", notes: "Dan’s partner. He gets stronger every time he battles." }), bk({}), bk({})],
+      gates: [gc({ name: "Triple Battle", type: "command", state: "set", at: 0 }), gc({}), gc({})],
+      abilities: [ab({ name: "Boosted Dragon", attr: "pyrus", effect: "Adds 100 Gs to Dragonoid.", state: "active" }), ab({}), ab({})] };
+    s.brawlers[3] = { name: "Shun",
+      bakugan: [bk({ name: "Skyress", page: "Skyress", attr: "ventus", base: 360, g: 360, status: "field", at: 1, pic: IMG + "c/c4/BK_CD_Skyress.jpg", abil: "Green Nobility" }), bk({}), bk({})],
+      gates: [gc({}), gc({}), gc({})],
+      abilities: [ab({}), ab({}), ab({})] };
+    s.msg = "Gate Card, open! Quartet Battle!";
+    s.log = { text: "Ability, activate! Boosted Dragon!", target: "2-0", delta: 100, outcome: "" };
+    return s;
+  }
+
+  /* ---------- Helpers ---------- */
+  function active(s) { s = s || state; return s.mode === "single" ? [0, 2] : s.mode === "royale" && s.royaleN === 3 ? [0, 1, 2] : [0, 1, 2, 3]; }
+  function isActive(b, s) { return active(s).indexOf(b) >= 0; }
+  function topOf(s) { return active(s).filter(function (b) { return b < 2; }); }
+  function bottomOf(s) { return active(s).filter(function (b) { return b >= 2; }); }
+  function teamOf(b, s) { s = s || state; return s.mode === "royale" ? "p" + b : b < 2 ? "top" : "bottom"; }
+  function bkAt(key, s) { s = s || state; var p = String(key || "").split("-"), br = s.brawlers[+p[0]]; return br && br.bakugan[+p[1]] || null; }
+  function bkName(k, i) { return k.name || "Bakugan " + (i + 1); }
+  function showOwners(s) { return (s || state).mode !== "single"; }
+  function splitList(t) { return String(t || "").split(/[,;\n]/).map(function (x) { return x.trim(); }).filter(Boolean); }
+  /* The Gate Card on a space (the first one, if two were put there). */
+  function gateOn(g, s) {
+    s = s || state; var found = null;
+    active(s).some(function (b) { return s.brawlers[b].gates.some(function (c, j) { if ((c.state === "set" || c.state === "open") && c.at === g) { found = { b: b, j: j, c: c }; return true; } return false; }); });
+    return found;
+  }
+  /* The Bakugan standing on a space, from the given brawlers. */
+  function bakuganOn(g, list, s) {
+    s = s || state; var out = [];
+    list.forEach(function (b) { s.brawlers[b].bakugan.forEach(function (k, i) { if (k.status === "field" && k.at === g) out.push({ b: b, i: i, k: k }); }); });
+    return out;
+  }
+  function fieldBakugan(s) {
+    s = s || state; var out = [];
+    active(s).forEach(function (b) { s.brawlers[b].bakugan.forEach(function (k, i) { out.push({ b: b, i: i, k: k }); }); });
+    return out;
+  }
+  function gNum(k) { return k.g === "" || k.g == null ? null : +k.g; }
+  function cleanWikiLink(url) {
+    url = String(url || "").trim();
+    return /^https:\/\/static\.wikia\.nocookie\.net\//i.test(url) ? url.replace(/\/revision\/.*$/i, "").replace(/\?.*$/, "") : url;
+  }
+  var STATUS_TEXT = function (k) { return k.status === "field" ? "Standing on Gate Card " + (k.at + 1) : k.status === "out" ? "Defeated" : k.status === "doom" ? "Lost to the Doom Dimension" : "Ready"; };
+
+  /* ---------- Building the AO3 code ---------- */
+  function attrTag(a) { return a ? '<span class="bkg-at bkg-a-' + a + '">' + cap(a) + "</span>" : ""; }
+  function secretHTML(name, kind, effect) {
+    if (!name && !effect && !kind) return "";
+    return '<span class="bkg-secret"><span class="bkg-sn">' + esc(name) + '</span><span class="bkg-sy">' + esc(kind) + '</span><span class="bkg-se">' + esc(effect) + "</span></span>";
+  }
+  function sumBakugan(k, b, i) {
+    var L = ['<div class="bkg-sum">'];
+    if (k.pic) L.push('<img class="bkg-sum-pic" src="' + esc(k.pic) + '" alt="" width="90">');
+    L.push('<span class="bkg-sum-head"><span class="bkg-sum-name' + (k.name ? "" : " bkg-noname") + '">' + esc(bkName(k, i)) + "</span> " + attrTag(k.attr) + "</span>");
+    var g = gNum(k), base = k.base === "" ? null : +k.base;
+    if (g !== null || base !== null) L.push('<span class="bkg-sum-line"><span class="bkg-k">G-Power</span> <span class="bkg-sum-g">' + (g !== null ? g : base) + " G</span>" +
+      (base !== null && g !== null && base !== g ? ' <span class="bkg-sum-base">(base ' + base + ")</span>" : base !== null && g === null ? "" : "") + "</span>");
+    L.push('<span class="bkg-sum-line"><span class="bkg-k">Brawler</span> <span class="bkg-sum-own">' + esc(state.brawlers[b].name) + '</span> · <span class="bkg-sum-st">' + STATUS_TEXT(k) + "</span></span>");
+    var abs = splitList(k.abil);
+    if (abs.length) L.push('<span class="bkg-sum-abs">' + abs.map(function (a) { return '<span class="bkg-mv' + (k.attr ? " bkg-a-" + k.attr : "") + '">' + esc(a) + "</span>"; }).join(" ") + "</span>");
+    if (k.notes) L.push('<span class="bkg-sum-text">' + esc(k.notes.replace(/\s*\n\s*/g, " ")) + "</span>");
+    L.push("</div>");
+    return L.join("\n");
+  }
+  function sumCard(c, b, isGate, onField) {
+    var L = ['<div class="bkg-sum">'];
+    L.push('<span class="bkg-sum-head"><span class="bkg-sum-name' + (c.name ? "" : " bkg-noname") + '">' + esc(c.name || (isGate ? "Gate Card" : "Ability Card")) + "</span> " +
+      (isGate ? (c.type ? '<span class="bkg-gt bkg-t-' + c.type + '">' + TYPE_NAME[c.type] + "</span>" : "") : attrTag(c.attr)) + "</span>");
+    L.push('<span class="bkg-sum-line"><span class="bkg-k">' + (onField ? "Set by" : "Brawler") + '</span> <span class="bkg-sum-own">' + esc(state.brawlers[b].name) + "</span>" +
+      (!isGate && c.state === "used" ? " · Used" : !isGate && c.state === "active" ? " · Activated" : isGate && c.state === "used" ? " · Used" : "") + "</span>");
+    if (c.effect) L.push('<span class="bkg-sum-text bkg-sum-eff">' + esc(c.effect) + "</span>");
+    L.push("</div>");
+    return L.join("\n");
+  }
+  function ballsHTML(b, preview, sel) {
+    var br = state.brawlers[b];
+    return '<span class="bkg-balls">' + br.bakugan.map(function (k, i) {
+      var key = b + "-" + i;
+      return '<span class="bkg-ball bkg-p' + b + " bkg-k" + i + (k.attr ? " bkg-a-" + k.attr : "") + " bkg-s-" + k.status + (preview && sel === "bk:" + key ? " is-sel" : "") + '"' +
+        (preview ? ' data-bk="' + key + '" title="' + esc(bkName(k, i)) + ": " + STATUS_TEXT(k) + '"' : "") + ">&nbsp;" + sumBakugan(k, b, i) + "</span>";
+    }).join("") + "</span>";
+  }
+  function plateHTML(b, preview, sel) {
+    var br = state.brawlers[b], left = br.bakugan.filter(function (k) { return k.status === "hand" || k.status === "field"; }).length;
+    return '<span class="bkg-plate bkg-c' + b + (preview && sel === "br:" + b ? " is-sel" : "") + '"' + (preview ? ' data-br="' + b + '" tabindex="0"' : "") + ">" +
+      '<span class="bkg-pname">' + esc(br.name) + "</span>" + ballsHTML(b, preview, sel) + '<span class="bkg-left">' + left + " / " + br.bakugan.length + "</span></span>";
+  }
+  function handHTML(b, preview) {
+    var br = state.brawlers[b], L = [], gIn = 0, aIn = 0;
+    br.gates.forEach(function (c, j) {
+      if (c.state === "set" || c.state === "open") return;
+      var cls = "bkg-mini bkg-gc bkg-p" + b + " bkg-j" + j;
+      if (c.state === "used") L.push('<span class="' + cls + " bkg-used bkg-t-" + (c.type || "none") + '">&nbsp;' + sumCard(c, b, true, false) + "</span>");
+      else { gIn++; L.push('<span class="' + cls + ' bkg-back">&nbsp;' + secretHTML(c.name, c.type, c.effect) + "</span>"); }
+    });
+    br.abilities.forEach(function (c, j) {
+      var cls = "bkg-mini bkg-ab bkg-p" + b + " bkg-j" + j;
+      if (c.state === "hand") { aIn++; L.push('<span class="' + cls + ' bkg-back">&nbsp;' + secretHTML(c.name, c.attr, c.effect) + "</span>"); }
+      else L.push('<span class="' + cls + (c.state === "active" ? " bkg-active" : " bkg-used") + (c.attr ? " bkg-a-" + c.attr : "") + '">&nbsp;' + sumCard(c, b, false, false) + "</span>");
+    });
+    L.push('<span class="bkg-hand-label">Gate ' + gIn + " · Ability " + aIn + "</span>");
+    return '<span class="bkg-hand"' + (preview ? ' data-br="' + b + '"' : "") + ">" + L.join("") + "</span>";
+  }
+  function stripHTML(b, top, preview, sel) {
+    var plate = '<td class="bkg-plate-c">' + plateHTML(b, preview, sel) + "</td>", hand = '<td class="bkg-hand-c">' + handHTML(b, preview) + "</td>";
+    return '<table class="bkg-strip bkg-strip-' + (top ? "opp" : "me") + " bkg-p" + b + '"><tr>' + (top ? hand + plate : plate + hand) + "</tr></table>";
+  }
+  function badgesHTML() {
+    var B = [];
+    splitList(state.fieldNote).forEach(function (n) { B.push('<span class="bkg-badge">' + esc(n) + "</span>"); });
+    if (state.doom) B.push('<span class="bkg-badge bkg-doom">Doom Card</span>');
+    if (state.round > 0) B.push('<span class="bkg-badge bkg-round">Round ' + state.round + "</span>");
+    return B.length ? '<div class="bkg-badges">' + B.join(" ") + "</div>" : "";
+  }
+  function tokenHTML(x, preview, sel) {
+    var k = x.k, key = x.b + "-" + x.i, g = gNum(k), base = k.base === "" ? null : +k.base;
+    var L = ['<div class="bkg-bk bkg-p' + x.b + " bkg-k" + x.i + (k.focus ? " bkg-focus" : "") + (preview && sel === "bk:" + key ? " is-sel" : "") + '"' + (preview ? ' data-bk="' + key + '" tabindex="0"' : "") + ">"];
+    if (k.pic) L.push('<img' + (k.flip ? ' class="bkg-flip"' : "") + ' src="' + esc(k.pic) + '" alt="' + esc(bkName(k, x.i)) + '" width="' + Math.max(32, Math.round(BASEW * (k.size || 100) / 100)) + '">');
+    else L.push('<span class="bkg-orb' + (k.attr ? " bkg-a-" + k.attr : "") + '">&nbsp;</span>');
+    if (g !== null) {
+      var d = base !== null ? g - base : 0;
+      L.push('<span class="bkg-gp">' + g + " G" + (d ? '<span class="bkg-gd' + (d < 0 ? " bkg-gd-down" : "") + '">' + (d > 0 ? "+" : "−") + Math.abs(d) + "</span>" : "") + "</span>");
+    }
+    if (showOwners()) L.push('<span class="bkg-own bkg-c' + x.b + '">' + esc(state.brawlers[x.b].name) + "</span>");
+    L.push(sumBakugan(k, x.b, x.i));
+    L.push("</div>");
+    return L.join("\n");
+  }
+  function gateCellHTML(g, preview, sel) {
+    var x = gateOn(g), battle = state.battleAt === g, a = preview ? ' data-gate="' + g + '" tabindex="0"' : "", s = preview && sel === "gate:" + g ? " is-sel" : "";
+    var inner;
+    if (!x) inner = '<span class="bkg-zone' + s + '"' + a + ">" + (preview ? '<span class="bkg-add">+</span>' : "&nbsp;") + "</span>";
+    else if (x.c.state === "set") inner = '<div class="bkg-gate bkg-back bkg-p' + x.b + " bkg-j" + x.j + s + '"' + a + ">&nbsp;" + secretHTML(x.c.name, x.c.type, x.c.effect) + "</div>";
+    else inner = '<div class="bkg-gate bkg-t-' + (x.c.type || "none") + " bkg-p" + x.b + " bkg-j" + x.j + s + '"' + a + ">" +
+      '<span class="bkg-gtype">' + esc(x.c.type ? TYPE_NAME[x.c.type] : "Gate Card") + '</span><span class="bkg-gname">' + esc(x.c.name || "?") + "</span>" + sumCard(x.c, x.b, true, true) + "</div>";
+    return "<td" + (battle ? ' class="bkg-battle"' : "") + ">" + inner + (battle ? '<span class="bkg-battle-tag">BATTLE</span>' : "") + "</td>";
+  }
+  function fieldHTML(preview, sel) {
+    var n = state.gates, cols = [];
+    for (var g = 0; g < n; g++) cols.push(g);
+    var row = function (list, cls) {
+      return '<tr class="' + cls + '">' + cols.map(function (g) {
+        var on = bakuganOn(g, list);
+        return "<td>" + (on.length ? on.map(function (x) { return tokenHTML(x, preview, sel); }).join("\n") : "&nbsp;") + "</td>";
+      }).join("\n") + "</tr>";
+    };
+    return '<div class="bkg-scroll"><table class="bkg-field bkg-bg-' + state.scene + " bkg-g" + n + '">\n' +
+      row(topOf(), "bkg-row-opp") + "\n" +
+      '<tr class="bkg-row-gate">' + cols.map(function (g) { return gateCellHTML(g, preview, sel); }).join("\n") + "</tr>\n" +
+      row(bottomOf(), "bkg-row-me") + "\n</table></div>";
+  }
+  /* The battle meter: the Bakugan on the battle card, grouped by side (or by brawler in a battle royale). */
+  function battleGroups() {
+    if (state.battleAt < 0 || state.battleAt >= state.gates) return [];
+    var groups = [], byKey = {};
+    bakuganOn(state.battleAt, active()).forEach(function (x) {
+      var t = teamOf(x.b);
+      if (!byKey[t]) { byKey[t] = { team: t, list: [], g: 0 }; groups.push(byKey[t]); }
+      byKey[t].list.push(x); byKey[t].g += gNum(x.k) || 0;
+    });
+    return groups;
+  }
+  function vsHTML() {
+    var groups = battleGroups();
+    if (!groups.length) return "";
+    var cell = function (gr, cls) {
+      return '<td class="' + cls + '"><span class="bkg-vs-n">' + gr.list.map(function (x) { return esc(bkName(x.k, x.i)) + (gr.list.length > 1 && gNum(x.k) !== null ? " " + gNum(x.k) : ""); }).join(" + ") + '</span><span class="bkg-vs-g">' + gr.g + " G</span></td>";
+    };
+    var L = ['<div class="bkg-vs">', '<table class="bkg-vs-t"><tr>'];
+    L.push(groups.map(function (gr, i) { return cell(gr, i === groups.length - 1 && i > 0 ? "bkg-vs-r" : "bkg-vs-l"); }).join('<td class="bkg-vs-x">VS</td>'));
+    L.push("</tr></table>");
+    if (groups.length === 2) {
+      var tot = groups[0].g + groups[1].g, w = tot ? Math.round(groups[0].g * 100 / tot) : 50;
+      L.push('<span class="bkg-meter"><span class="bkg-meter-fill bkg-w' + w + '">&nbsp;</span></span>');
+    }
+    var gx = gateOn(state.battleAt);
+    if (gx && gx.c.state === "open" && gx.c.name) L.push('<span class="bkg-vs-line"><span class="bkg-k">Gate Card</span> ' + esc(gx.c.name) + (gx.c.effect ? ": " + esc(gx.c.effect) : "") + "</span>");
+    active().forEach(function (b) {
+      state.brawlers[b].abilities.forEach(function (c) {
+        if (c.state === "active" && c.name) L.push('<span class="bkg-vs-line"><span class="bkg-k">Ability</span> ' + esc(c.name) + " (" + esc(state.brawlers[b].name) + ")" + (c.effect ? ": " + esc(c.effect) : "") + "</span>");
+      });
+    });
+    L.push("</div>");
+    return L.join("\n");
+  }
+  function boardHTML(preview, sel) {
+    var lines = String(state.msg || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+    var top = topOf(), bottom = bottomOf();
+    var L = ['<div class="bkg-brawl' + (state.mode === "tag" ? " bkg-tag" : state.mode === "royale" ? " bkg-royale bkg-n" + active().length : "") + '">'];
+    var b = badgesHTML(); if (b) L.push(b);
+    /* Partners sit on the outside: the opponent's partner on top, the hero's partner at the bottom. */
+    top.slice().reverse().forEach(function (x) { L.push(stripHTML(x, true, preview, sel)); });
+    L.push(fieldHTML(preview, sel));
+    bottom.forEach(function (x) { L.push(stripHTML(x, false, preview, sel)); });
+    var vs = vsHTML(); if (vs) L.push(vs);
+    if (lines.length || preview) L.push('<div class="bkg-msg"' + (preview ? ' data-msg="1" tabindex="0"' : "") + ">" + (lines.length ? lines.map(function (x) { return '<span class="bkg-line">' + esc(x) + "</span>"; }).join("\n") : "&nbsp;") + "</div>");
+    L.push("</div>");
+    return L.join("\n");
+  }
+
+  function logResult() {
+    var k = bkAt(state.log.target), d = Number(state.log.delta) || 0;
+    if (!k) return null;
+    var before = gNum(k);
+    return { k: k, i: +String(state.log.target).split("-")[1], before: before, after: before === null ? null : Math.max(0, before + d), d: d };
+  }
+  function logHTML() {
+    var x = logResult(), L = [];
+    L.push('<div class="bkg-log' + (x && x.d < 0 ? " bkg-log-down" : "") + '">');
+    if (state.log.text) L.push('<span class="bkg-line">' + esc(state.log.text) + "</span>");
+    if (x && x.d !== 0 && x.before !== null) L.push('<span class="bkg-log-g">' + esc(bkName(x.k, x.i)) + " " + x.before + " G → " + x.after + ' G <span class="bkg-delta">' + (x.d > 0 ? "+" : "−") + Math.abs(x.after - x.before) + "</span></span>");
+    if (x && state.log.outcome === "win") L.push('<span class="bkg-line">' + esc(bkName(x.k, x.i)) + " wins the battle!</span>");
+    if (x && state.log.outcome === "out") L.push('<span class="bkg-line">' + esc(bkName(x.k, x.i)) + " is defeated!</span>");
+    if (x && state.log.outcome === "doom") L.push('<span class="bkg-line">' + esc(bkName(x.k, x.i)) + " is sent to the Doom Dimension!</span>");
+    if (L.length === 1) L.push("&nbsp;");
+    L.push("</div>");
+    return L.join("\n");
+  }
+
+  /* ---------- Reading a board back in ---------- */
+  var txt = function (el) { return el ? el.textContent.replace(/\s+/g, " ").trim() : ""; };
+  function classVal(el, prefix, list) {
+    if (!el) return null;
+    for (var i = 0; i < el.classList.length; i++) {
+      var c = el.classList[i];
+      if (c.indexOf(prefix) === 0) { var v = c.slice(prefix.length); if (!list || list.indexOf(v) >= 0) return v; }
+    }
+    return null;
+  }
+  var directSum = function (el) { for (var i = 0; i < el.children.length; i++) if (el.children[i].classList.contains("bkg-sum")) return el.children[i]; return null; };
+  function sumName(sum) { var n = sum && sum.querySelector(".bkg-sum-name"); return n && !n.classList.contains("bkg-noname") ? txt(n) : ""; }
+  function readCard(el, isGate) {
+    var c = isGate ? newGate() : newAbility(), sec = el.querySelector(".bkg-secret"), sum = directSum(el);
+    if (sec) {
+      c.name = txt(sec.querySelector(".bkg-sn")); c.effect = txt(sec.querySelector(".bkg-se"));
+      var y = txt(sec.querySelector(".bkg-sy"));
+      if (isGate) c.type = TYPE_NAME[y] !== undefined ? y : ""; else c.attr = ATTRS.indexOf(y) >= 0 ? y : "";
+    } else if (sum) {
+      c.name = sumName(sum); c.effect = txt(sum.querySelector(".bkg-sum-eff"));
+      if (isGate) c.type = classVal(sum.querySelector(".bkg-gt"), "bkg-t-", Object.keys(TYPE_NAME)) || "";
+      else c.attr = classVal(sum.querySelector(".bkg-at"), "bkg-a-", ATTRS) || "";
+    }
+    if (isGate && !c.type && el.classList.contains("bkg-gate")) { var t = classVal(el, "bkg-t-", Object.keys(TYPE_NAME)); if (t && t !== "none") c.type = t; }
+    return c;
+  }
+  function parseBoard(html) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var root = doc.querySelector(".bkg-brawl");
+    if (!root || !root.querySelector(".bkg-field")) throw new Error("not a board");
+    var s = emptyState();
+    s.mode = root.classList.contains("bkg-tag") ? "tag" : root.classList.contains("bkg-royale") ? "royale" : "single";
+    if (s.mode === "royale") s.royaleN = root.classList.contains("bkg-n3") ? 3 : 4;
+    var seen = {};
+    each(root.querySelectorAll(".bkg-strip"), function (strip) {
+      var b = +classVal(strip, "bkg-p"); if (isNaN(b) || b > 3) return;
+      seen[b] = true;
+      var br = { name: txt(strip.querySelector(".bkg-pname")) || s.brawlers[b].name, bakugan: [], gates: [], abilities: [] };
+      each(strip.querySelectorAll(".bkg-ball"), function (el) {
+        var k = newBakugan(), sum = directSum(el);
+        k.attr = classVal(el, "bkg-a-", ATTRS) || "";
+        k.status = classVal(el, "bkg-s-", ["hand", "field", "out", "doom"]) || "hand";
+        if (sum) {
+          k.name = sumName(sum);
+          var img = sum.querySelector(".bkg-sum-pic"); if (img) k.pic = img.getAttribute("src") || "";
+          var g = txt(sum.querySelector(".bkg-sum-g")).match(/\d+/), base = txt(sum.querySelector(".bkg-sum-base")).match(/\d+/);
+          if (g) { k.g = +g[0]; k.base = base ? +base[0] : +g[0]; }
+          k.abil = Array.prototype.map.call(sum.querySelectorAll(".bkg-mv"), txt).join(", ");
+          k.notes = txt(sum.querySelector(".bkg-sum-text"));
+        }
+        var ki = parseInt(classVal(el, "bkg-k"), 10); br.bakugan[isNaN(ki) ? br.bakugan.length : ki] = k;
+      });
+      each(strip.querySelectorAll(".bkg-gc"), function (el) {
+        var c = readCard(el, true); c.state = el.classList.contains("bkg-used") ? "used" : "hand";
+        br.gates[+classVal(el, "bkg-j")] = c;
+      });
+      each(strip.querySelectorAll(".bkg-ab"), function (el) {
+        var c = readCard(el, false); c.state = el.classList.contains("bkg-active") ? "active" : el.classList.contains("bkg-used") ? "used" : "hand";
+        br.abilities[+classVal(el, "bkg-j")] = c;
+      });
+      s.brawlers[b] = br;
+    });
+    var field = root.querySelector(".bkg-field");
+    s.scene = classVal(field, "bkg-bg-", SCENES.map(function (x) { return x[0]; })) || "arena";
+    var rows = field.querySelectorAll("tr");
+    s.gates = clampInt(rows[1] ? rows[1].children.length : 3, 1, 6);
+    s.battleAt = -1;
+    each(rows, function (tr) {
+      each(tr.children, function (td, g) {
+        if (td.classList.contains("bkg-battle")) s.battleAt = g;
+        each(td.querySelectorAll(".bkg-gate"), function (el) {
+          var b = +classVal(el, "bkg-p"), j = +classVal(el, "bkg-j"); if (!s.brawlers[b]) return;
+          var c = readCard(el, true); c.state = el.classList.contains("bkg-back") ? "set" : "open"; c.at = g;
+          s.brawlers[b].gates[j] = c;
+        });
+        each(td.querySelectorAll(".bkg-bk"), function (el) {
+          var k = bkAt(classVal(el, "bkg-p") + "-" + classVal(el, "bkg-k"), s); if (!k) return;
+          k.status = "field"; k.at = g; k.focus = el.classList.contains("bkg-focus");
+          var img = el.querySelector(":scope > img");
+          if (img) { k.pic = img.getAttribute("src") || k.pic; k.flip = img.classList.contains("bkg-flip"); var w = +img.getAttribute("width"); if (w) k.size = clampInt(Math.round(w * 100 / BASEW), 40, 200); }
+        });
+      });
+    });
+    /* Fill any gaps (a card the HTML lost) so every list stays whole. */
+    s.brawlers.forEach(function (br) {
+      ["bakugan", "gates", "abilities"].forEach(function (f) {
+        var mk = f === "bakugan" ? newBakugan : f === "gates" ? newGate : newAbility;
+        for (var i = 0; i < br[f].length; i++) if (!br[f][i]) br[f][i] = mk();
+        if (!br[f].length) br[f] = [mk(), mk(), mk()];
+      });
+    });
+    s.round = 0; var notes = [];
+    each(root.querySelectorAll(".bkg-badges .bkg-badge"), function (x) {
+      if (x.classList.contains("bkg-round")) { s.round = clampInt(txt(x).replace(/\D/g, ""), 0, 999); return; }
+      if (x.classList.contains("bkg-doom")) { s.doom = true; return; }
+      notes.push(txt(x));
+    });
+    s.fieldNote = notes.join(", ");
+    s.msg = Array.prototype.map.call(root.querySelectorAll(".bkg-msg .bkg-line"), txt).join("\n");
+    var first = fieldBakugan(s)[0]; s.log.target = first ? first.b + "-" + first.i : "2-0";
+    return s;
+  }
+
+  /* ---------- State, saving ---------- */
+  var KEY = "bkg-brawl-builder-v1";
+  var state, sel = null, lookupMsg = "", lastResults = [], cardMsg = "";
+  try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+  if (!state || state.v !== 1 || !state.brawlers || state.brawlers.length !== 4) state = exampleState();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable: keep working without it */ } }
+
+  /* ---------- Rendering ---------- */
+  var preview = $("#preview"), boardOut = $("#board-out"), editor = $("#editor"), brawlersEl = $("#brawlers");
+  function render() {
+    preview.innerHTML = boardHTML(true, sel);
+    boardOut.value = boardHTML(false);
+    $("#log-preview").innerHTML = logHTML();
+    save();
+  }
+  function opt(list, val) { return list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(val) ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join(""); }
+  function gateOpts(short) { var o = []; for (var g = 0; g < state.gates; g++) o.push([g, (short ? "Space " : "Gate Card ") + (g + 1)]); return o; }
+  function fillDynamic() {
+    $("#battle-at").innerHTML = opt([[-1, "No battle"]].concat(gateOpts()), state.battleAt);
+    var fb = fieldBakugan();
+    if (!bkAt(state.log.target) || !isActive(+String(state.log.target).split("-")[0])) state.log.target = fb[0] ? fb[0].b + "-" + fb[0].i : "";
+    $("#log-target").innerHTML = opt(fb.map(function (x) { return [x.b + "-" + x.i, state.brawlers[x.b].name + ": " + bkName(x.k, x.i)]; }), state.log.target);
+  }
+  function brawlersHTML() {
+    var h = '<div class="field"><span class="legend">Kind of battle</span><div class="seg" role="radiogroup" aria-label="Kind of battle">' +
+      MODES.map(function (x) { return '<label><input type="radio" name="mode" value="' + x[0] + '" data-mode' + (state.mode === x[0] ? " checked" : "") + "><span>" + x[1] + "</span></label>"; }).join("") + "</div>";
+    if (state.mode === "royale") h += '<div class="seg" role="radiogroup" aria-label="Brawlers in the battle royale" style="margin-top:6px">' +
+      [3, 4].map(function (n) { return '<label><input type="radio" name="royale-n" value="' + n + '" data-royale' + (state.royaleN === n ? " checked" : "") + "><span>" + n + " brawlers</span></label>"; }).join("") + "</div>";
+    h += '<p class="hint">' + (state.mode === "tag" ? "Two against two. Each brawler has their own Bakugan and cards; the partners’ strips sit on the outside."
+      : state.mode === "royale" ? "Everyone for themselves. Each brawler has their own colour, and the battle meter compares every brawler on the battle card."
+      : "One brawler on each side.") + "</p></div>";
+    var label = function (b) {
+      if (state.mode === "royale") return "Brawler " + (active().indexOf(b) + 1) + " (" + COLOR_NAME[b] + (b < 2 ? ", top" : ", bottom") + ")";
+      return ["Opponent", "Opponent’s partner", "Hero", "Hero’s partner"][b] + (state.mode === "tag" ? (b === 1 ? " (top)" : b === 3 ? " (bottom)" : "") : "");
+    };
+    active().forEach(function (b) {
+      h += '<div class="field"><label for="bn-' + b + '">' + label(b) + '</label><div class="inline"><input type="text" id="bn-' + b + '" data-bname="' + b + '" value="' + esc(state.brawlers[b].name) + '">' +
+        '<button type="button" class="btn-ghost btn-sm" data-editbr="' + b + '">Cards and Bakugan</button></div></div>';
+    });
+    return h;
+  }
+  function fillInputs() {
+    brawlersEl.innerHTML = brawlersHTML();
+    $("#gates").innerHTML = opt([1, 2, 3, 4, 5, 6].map(function (n) { return [n, n]; }), state.gates);
+    $("#scene").innerHTML = opt(SCENES, state.scene);
+    $("#round").value = state.round; $("#doom").checked = state.doom; $("#field-note").value = state.fieldNote;
+    $("#msg").value = state.msg;
+    $("#log-text").value = state.log.text; $("#log-delta").value = state.log.delta; $("#log-out").value = state.log.outcome;
+    fillDynamic();
+  }
+
+  /* ---------- Editors ---------- */
+  function check(id, attrs, on, label) { return '<label class="check"><input type="checkbox" id="' + id + '" ' + attrs + (on ? " checked" : "") + "><span>" + label + "</span></label>"; }
+  function seg(name, attrs, items, val) {
+    return '<div class="seg" role="radiogroup">' + items.map(function (it) {
+      return '<label><input type="radio" name="' + name + '" value="' + it[0] + '" ' + attrs + (String(it[0]) === String(val) ? " checked" : "") + "><span>" + it[1] + "</span></label>";
+    }).join("") + "</div>";
+  }
+  var attrOpts = function (blank) { return [["", blank || "–"]].concat(ATTRS.map(function (a) { return [a, cap(a)]; })); };
+  function selKind() { return sel ? sel.split(":")[0] : ""; }
+  function selId() { return sel ? sel.split(":")[1] : ""; }
+  function curBk() { return selKind() === "bk" ? bkAt(selId()) : null; }
+
+  function editorHTML() {
+    var kind = selKind();
+    if (kind === "bk") return bkEditorHTML();
+    if (kind === "gate") return gateEditorHTML();
+    if (kind === "br") return brEditorHTML();
+    return '<p class="empty-note">Click a Bakugan, a Gate Card space or a brawler on the board to edit it. Or open a brawler’s cards and Bakugan from the Brawlers panel.</p>';
+  }
+
+  /* A brawler: their name, Bakugan, Gate Cards and Ability Cards. */
+  function brEditorHTML() {
+    var b = +selId(), br = state.brawlers[b];
+    var gsel = function (attrs, val) { return '<select ' + attrs + ">" + opt(gateOpts(true).map(function (o) { return [o[0], "#" + (o[0] + 1)]; }), val) + "</select>"; };
+    var h = '<p class="zone-title">' + esc(br.name) + "</p>";
+    h += '<p class="sub">Bakugan</p><div class="items">' + br.bakugan.map(function (k, i) {
+      return '<div class="item"><div class="item-top bk"><input type="text" aria-label="Bakugan ' + (i + 1) + ' name" data-row="bakugan" data-i="' + i + '" data-k="name" placeholder="Bakugan ' + (i + 1) + '" value="' + esc(k.name) + '">' +
+        '<select aria-label="Bakugan ' + (i + 1) + ' status" data-row="bakugan" data-i="' + i + '" data-k="status">' + opt(BK_STATUS, k.status) + "</select>" +
+        (k.status === "field" ? gsel('aria-label="Bakugan ' + (i + 1) + ' gate" data-row="bakugan" data-i="' + i + '" data-k="at"', k.at) : "<span></span>") +
+        '<button type="button" class="btn-ghost btn-sm" data-editbk="' + b + "-" + i + '">Edit</button></div></div>';
+    }).join("") + "</div>";
+    h += listButtons("bakugan", br.bakugan.length);
+    h += '<p class="sub">Gate Cards</p><div class="items">' + br.gates.map(function (c, j) {
+      return '<div class="item"><div class="item-top"><input type="text" aria-label="Gate Card ' + (j + 1) + ' name" data-row="gates" data-i="' + j + '" data-k="name" placeholder="Gate Card ' + (j + 1) + '" value="' + esc(c.name) + '">' +
+        '<select aria-label="Gate Card ' + (j + 1) + ' state" data-row="gates" data-i="' + j + '" data-k="state">' + opt(GC_STATE, c.state) + "</select>" +
+        (c.state === "set" || c.state === "open" ? gsel('aria-label="Gate Card ' + (j + 1) + ' space" data-row="gates" data-i="' + j + '" data-k="at"', c.at) : "<span></span>") + "</div>" +
+        '<div class="row2"><select aria-label="Gate Card ' + (j + 1) + ' type" data-row="gates" data-i="' + j + '" data-k="type">' + opt(GC_TYPES.map(function (t, i) { return i ? t : ["", "Type"]; }), c.type) + "</select>" +
+        '<input type="text" aria-label="Gate Card ' + (j + 1) + ' effect" data-row="gates" data-i="' + j + '" data-k="effect" placeholder="Effect" value="' + esc(c.effect) + '"></div></div>';
+    }).join("") + "</div>";
+    h += listButtons("gates", br.gates.length);
+    h += '<p class="sub">Ability Cards</p><div class="items">' + br.abilities.map(function (c, j) {
+      return '<div class="item"><div class="item-top"><input type="text" aria-label="Ability Card ' + (j + 1) + ' name" data-row="abilities" data-i="' + j + '" data-k="name" list="abil-dl" placeholder="Ability Card ' + (j + 1) + '" value="' + esc(c.name) + '">' +
+        '<select aria-label="Ability Card ' + (j + 1) + ' state" data-row="abilities" data-i="' + j + '" data-k="state">' + opt(AB_STATE, c.state) + "</select>" +
+        '<select aria-label="Ability Card ' + (j + 1) + ' attribute" data-row="abilities" data-i="' + j + '" data-k="attr">' + opt(attrOpts(), c.attr) + "</select></div>" +
+        '<input type="text" aria-label="Ability Card ' + (j + 1) + ' effect" data-row="abilities" data-i="' + j + '" data-k="effect" placeholder="Effect" value="' + esc(c.effect) + '"></div>';
+    }).join("") + '</div><datalist id="abil-dl">' + knownAbilities(b).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + "</datalist>";
+    h += listButtons("abilities", br.abilities.length);
+    h += '<p class="hint" id="card-status" style="margin-top:8px">' + (cardMsg || "Type a card’s name and press Enter (or click away) to fill in its type, attribute and effect from the wiki.") + "</p>";
+    return h;
+  }
+  function listButtons(f, n) {
+    return '<div class="btn-row"><button type="button" class="btn-ghost btn-sm" data-add="' + f + '"' + (n >= 6 ? " disabled" : "") + ">+ Add one</button>" +
+      '<button type="button" class="btn-ghost btn-sm danger" data-del="' + f + '"' + (n <= 1 ? " disabled" : "") + ">Remove the last</button></div>";
+  }
+  function knownAbilities(b) {
+    var out = [];
+    state.brawlers[b].bakugan.forEach(function (k) { (k.known || []).forEach(function (a) { if (out.indexOf(a.name) < 0) out.push(a.name); }); });
+    return out;
+  }
+
+  /* A Bakugan. */
+  function bkEditorHTML() {
+    var key = selId(), k = curBk(), b = +key.split("-")[0], i = +key.split("-")[1];
+    var h = '<p class="zone-title">' + esc(state.brawlers[b].name) + "’s " + esc(bkName(k, i)) + "</p>";
+    h += '<div class="field"><label for="f-look">Look up on the wiki</label><div class="inline"><input type="text" id="f-look" autocomplete="off" placeholder="Dragonoid, Tigrerra or Hydranoid" value="' + esc(k.name) + '">' +
+      '<button type="button" class="btn" id="lookup-btn">Look up</button></div>' +
+      '<div class="lookup-out" id="lookup-out" aria-live="polite">' + lookupMsg + "</div>" +
+      '<p class="hint">Look up fills in its attribute, G-Power, its abilities from the anime and its picture. Bakugan from the first series are listed first.</p></div>';
+    h += '<div class="row2"><div class="field"><label for="f-name">Name</label><input type="text" id="f-name" data-f="name" value="' + esc(k.name) + '"></div>' +
+      '<div class="field"><label for="f-attr">Attribute</label><select id="f-attr" data-f="attr">' + opt(attrOpts("None"), k.attr) + "</select></div></div>";
+    h += '<div class="row2"><div class="field"><label for="f-base">Base G-Power</label><input type="number" id="f-base" min="0" max="99999" data-f="base" value="' + esc(k.base) + '"></div>' +
+      '<div class="field"><label for="f-g">G-Power now</label><input type="number" id="f-g" min="0" max="99999" data-f="g" value="' + esc(k.g) + '"></div></div>';
+    h += '<div class="btn-row">' + [100, 50, -50, -100].map(function (d) { return '<button type="button" class="btn-ghost btn-sm" data-dg="' + d + '">' + (d > 0 ? "+" : "−") + Math.abs(d) + " G</button>"; }).join("") +
+      '<button type="button" class="btn-ghost btn-sm" id="g-reset">Back to base</button></div>';
+    h += '<div class="field"><span class="legend">Where it is</span>' + seg("f-status", 'data-f="status"', BK_STATUS, k.status) + "</div>";
+    if (k.status === "field") h += '<div class="field"><label for="f-at">Standing on</label><select id="f-at" data-f="at">' + opt(gateOpts(), k.at) + "</select></div>";
+    h += '<div class="checks">' + check("f-focus", 'data-f="focus"', k.focus, "Mark it with a golden glow") + "</div>";
+    h += '<div class="field"><label for="f-abil">Abilities in its info panel</label><input type="text" id="f-abil" data-f="abil" placeholder="Boosted Dragon, Fire Wall" value="' + esc(k.abil) + '"><p class="hint">Put a comma between them. Its brawler’s Ability Cards are set in the brawler’s cards.</p></div>';
+    if (k.known && k.known.length) h += '<div class="btn-row"><button type="button" class="btn-ghost btn-sm" id="abil-to-cards">Give its abilities to ' + esc(state.brawlers[b].name) + "’s Ability Cards</button></div>";
+    h += '<p class="sub">Picture</p>';
+    if (k.pics && k.pics.length) {
+      h += '<p class="hint">Pictures on its wiki page. Click one to use it.</p><div class="pics">' + k.pics.map(function (p, n) {
+        return '<button type="button" class="pic-choice' + (p.url === k.pic ? " on" : "") + '" data-pic="' + n + '" title="' + esc(p.cap || p.file) + '"><img src="' + esc(p.url) + '" alt="" loading="lazy"><span>' + esc(p.cap || p.file) + "</span></button>";
+      }).join("") + "</div>";
+    }
+    h += '<div class="field"><label for="f-pic">Picture link</label><div class="pic-row"><div style="display:grid;gap:4px;min-width:0">' +
+      '<input type="url" id="f-pic" data-f="pic" placeholder="https://i.imgur.com/abc123.png" value="' + esc(k.pic) + '">' +
+      '<p class="hint" id="img-status"></p></div><img id="img-thumb" alt="" hidden></div>' +
+      '<p class="hint">Pick a picture above after a lookup, or paste a direct link to a picture (it usually ends in .png, .jpg or .gif). With no picture, the Bakugan shows as a ball in its attribute’s colour.</p></div>';
+    h += '<div class="row2"><div class="field"><label for="f-size">Size on the field</label><select id="f-size" data-f="size">' + opt([[60, "Tiny (60%)"], [80, "Small (80%)"], [100, "Normal"], [125, "Large (125%)"], [150, "Huge (150%)"]], k.size) + "</select></div>" +
+      '<div class="field"><span class="legend">&nbsp;</span>' + check("f-flip", 'data-f="flip"', k.flip, "Mirror the picture") + "</div></div>";
+    h += '<div class="field"><label for="f-notes">Notes in the info panel</label><textarea id="f-notes" rows="2" data-f="notes">' + esc(k.notes) + "</textarea></div>";
+    h += '<div class="btn-row"><button type="button" class="btn-ghost" data-editbr="' + b + '">← ' + esc(state.brawlers[b].name) + "’s cards and Bakugan</button></div>";
+    return h;
+  }
+
+  /* A Gate Card space. */
+  function gateEditorHTML() {
+    var g = +selId(), x = gateOn(g);
+    var h = '<p class="zone-title">Gate Card space ' + (g + 1) + "</p>";
+    var choices = [["", "Nothing here"]];
+    active().forEach(function (b) { state.brawlers[b].gates.forEach(function (c, j) { if (c.state !== "used") choices.push([b + "-" + j, state.brawlers[b].name + ": " + (c.name || "Gate Card " + (j + 1)) + (c.state === "set" || c.state === "open" ? " (on space " + (c.at + 1) + ")" : "")]); }); });
+    h += '<div class="field"><label for="g-card">Gate Card here</label><select id="g-card">' + opt(choices, x ? x.b + "-" + x.j : "") + "</select></div>";
+    if (x) {
+      h += '<div class="field"><label for="g-name">Name</label><div class="inline"><input type="text" id="g-name" data-gf="name" value="' + esc(x.c.name) + '" placeholder="Quartet Battle"><button type="button" class="btn" id="g-look">Look up</button></div></div>';
+      h += '<div class="row2"><div class="field"><label for="g-type">Type</label><select id="g-type" data-gf="type">' + opt(GC_TYPES, x.c.type) + "</select></div>" +
+        '<div class="field"><span class="legend">&nbsp;</span>' + seg("g-state", "data-gf=\"state\"", [["set", "Face-down"], ["open", "Open"]], x.c.state) + "</div></div>";
+      h += '<div class="field"><label for="g-effect">Effect</label><textarea id="g-effect" rows="2" data-gf="effect">' + esc(x.c.effect) + "</textarea></div>";
+      h += '<p class="hint" id="card-status" style="margin:-4px 0 12px">' + (cardMsg || "While it’s face-down, readers don’t see its name or effect.") + "</p>";
+    }
+    h += '<div class="checks">' + check("g-battle", "", state.battleAt === g, "The battle is on this card") + "</div>";
+    var on = bakuganOn(g, active());
+    h += '<p class="sub">Bakugan standing here</p>' + (on.length ? '<div class="btn-row">' + on.map(function (y) { return '<button type="button" class="btn-ghost btn-sm" data-editbk="' + y.b + "-" + y.i + '">' + esc(state.brawlers[y.b].name + ": " + bkName(y.k, y.i)) + "</button>"; }).join("") + "</div>" : '<p class="hint" style="margin-bottom:8px">None yet.</p>');
+    var ready = [["", "Choose a Bakugan…"]];
+    active().forEach(function (b) { state.brawlers[b].bakugan.forEach(function (k, i) { if (k.status === "hand") ready.push([b + "-" + i, state.brawlers[b].name + ": " + bkName(k, i)]); }); });
+    if (ready.length > 1) h += '<div class="field"><label for="g-throw">Throw a Bakugan onto this card</label><select id="g-throw">' + opt(ready, "") + "</select></div>";
+    return h;
+  }
+
+  function editorTitle() {
+    var k = selKind();
+    return k === "bk" ? "Edit a Bakugan" : k === "gate" ? "Edit a Gate Card space" : k === "br" ? "Edit a brawler’s cards" : "Edit the board";
+  }
+  function renderEditor() {
+    var focusId = document.activeElement && editor.contains(document.activeElement) ? document.activeElement.id : null;
+    var focusData = document.activeElement && editor.contains(document.activeElement) && document.activeElement.dataset.row ? document.activeElement.dataset.row + "|" + document.activeElement.dataset.i + "|" + document.activeElement.dataset.k : null;
+    $("#ed-title").textContent = editorTitle();
+    editor.innerHTML = editorHTML();
+    if (focusId && document.getElementById(focusId)) document.getElementById(focusId).focus();
+    else if (focusData) { var p = focusData.split("|"), el = editor.querySelector('[data-row="' + p[0] + '"][data-i="' + p[1] + '"][data-k="' + p[2] + '"]'); if (el) el.focus(); }
+    checkPicture();
+  }
+  function select(s) {
+    sel = s; lookupMsg = ""; cardMsg = "";
+    render(); renderEditor();
+    if (window.matchMedia("(max-width: 900px)").matches) $("#ed-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /* Changes from the editors */
+  function setBk(el) {
+    var k = curBk(); if (!k) return;
+    var f = el.dataset.f, v = el.type === "checkbox" ? el.checked : el.value;
+    if (f === "base" || f === "g") v = numOrBlank(v);
+    if (f === "size") v = clampInt(v, 40, 200);
+    if (f === "at") v = clampInt(v, 0, state.gates - 1);
+    if (f === "focus" && v) fieldBakugan().forEach(function (x) { x.k.focus = false; });
+    if (f === "base" && (k.g === "" || k.g === k.base)) { k.g = v; if ($("#f-g")) $("#f-g").value = v; }
+    k[f] = v;
+  }
+  function setRow(el) {
+    var br = state.brawlers[+selId()], list = br[el.dataset.row], c = list[+el.dataset.i], f = el.dataset.k, v = el.value;
+    if (f === "at") v = clampInt(v, 0, state.gates - 1);
+    if (el.dataset.row === "gates" && f === "state" && (v === "set" || v === "open")) placeGate(c, firstFreeGate(c));
+    else if (el.dataset.row === "bakugan" && f === "status" && v === "field") c.at = clampInt(c.at, 0, state.gates - 1);
+    if (el.dataset.row === "gates" && f === "at") { placeGate(c, v); return; }
+    c[f] = v;
+  }
+  function firstFreeGate(c) { for (var g = 0; g < state.gates; g++) { var x = gateOn(g); if (!x || x.c === c) return g; } return 0; }
+  /* Put a Gate Card on a space; a card already there goes back to its brawler's hand. */
+  function placeGate(c, g) {
+    var x = gateOn(g);
+    if (x && x.c !== c) x.c.state = "hand";
+    c.at = g; if (c.state !== "open") c.state = "set";
+  }
+
+  editor.addEventListener("input", function (e) {
+    var el = e.target;
+    if (el.dataset.row && el.tagName !== "SELECT") { setRow(el); render(); if (el.dataset.k === "name") fillDynamic(); return; }
+    if (el.dataset.gf && el.tagName !== "SELECT" && el.type !== "radio") { var x = gateOn(+selId()); if (x) { x.c[el.dataset.gf] = el.value; render(); } return; }
+    if (!el.dataset.f || el.type === "radio" || el.type === "checkbox" || el.tagName === "SELECT") return;
+    setBk(el); render();
+    if (el.dataset.f === "name") { fillDynamic(); $("#ed-panel .zone-title").textContent = state.brawlers[+selId().split("-")[0]].name + "’s " + bkName(curBk(), +selId().split("-")[1]); }
+    if (el.dataset.f === "pic") { clearTimeout(checkPicture.t); checkPicture.t = setTimeout(checkPicture, 450); }
+  });
+  editor.addEventListener("change", function (e) {
+    var el = e.target, x;
+    if (el.dataset.row) {
+      if (el.tagName === "SELECT") { setRow(el); render(); fillDynamic(); renderEditor(); }
+      else if (el.dataset.k === "name" && el.value.trim()) lookupCard(el.dataset.row, +el.dataset.i);
+      return;
+    }
+    if (el.id === "g-card") {
+      var g = +selId(); x = gateOn(g);
+      if (!el.value) { if (x) x.c.state = "hand"; }
+      else { var p = el.value.split("-"); placeGate(state.brawlers[+p[0]].gates[+p[1]], g); }
+      cardMsg = ""; render(); renderEditor(); return;
+    }
+    if (el.id === "g-battle") { state.battleAt = el.checked ? +selId() : -1; fillDynamic(); render(); return; }
+    if (el.id === "g-throw") {
+      var q = el.value.split("-"), k = state.brawlers[+q[0]].bakugan[+q[1]];
+      k.status = "field"; k.at = +selId(); fillDynamic(); render(); renderEditor(); return;
+    }
+    if (el.dataset.gf) {
+      x = gateOn(+selId()); if (!x) return;
+      if (el.tagName === "SELECT" || el.type === "radio") { x.c[el.dataset.gf] = el.value; render(); renderEditor(); }
+      else if (el.dataset.gf === "name" && el.value.trim()) lookupGateHere();
+      return;
+    }
+    if (!el.dataset.f) return;
+    if (el.dataset.f === "pic") {
+      var kk = curBk(), clean = cleanWikiLink(el.value);
+      if (kk && clean !== el.value.trim()) { kk.pic = clean; el.value = clean; render(); checkPicture(); }
+      return;
+    }
+    if (el.type === "radio" || el.type === "checkbox" || el.tagName === "SELECT") {
+      setBk(el); render(); fillDynamic();
+      if (el.type === "radio" || el.dataset.f === "attr") renderEditor();
+    }
+  });
+  editor.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var el = e.target;
+    if (el.id === "f-look") { e.preventDefault(); doLookup(); }
+    else if (el.id === "g-name") { e.preventDefault(); lookupGateHere(); }
+    else if (el.dataset.row && el.dataset.k === "name" && el.tagName === "INPUT") { e.preventDefault(); lookupCard(el.dataset.row, +el.dataset.i); }
+  });
+  editor.addEventListener("click", function (e) {
+    var t = e.target, id = t.id, k = curBk();
+    if (id === "lookup-btn") { doLookup(); return; }
+    if (id === "g-look") { lookupGateHere(); return; }
+    var eb = t.closest("[data-editbk]"); if (eb) { select("bk:" + eb.dataset.editbk); return; }
+    var ebr = t.closest("[data-editbr]"); if (ebr) { select("br:" + ebr.dataset.editbr); return; }
+    var add = t.closest("[data-add]"), del = t.closest("[data-del]");
+    if (add || del) {
+      var br = state.brawlers[+selId()], f = (add || del).dataset[add ? "add" : "del"], list = br[f];
+      if (add && list.length < 6) list.push(f === "bakugan" ? newBakugan() : f === "gates" ? newGate() : newAbility());
+      if (del && list.length > 1) list.pop();
+      fillDynamic(); render(); renderEditor(); return;
+    }
+    if (!k) return;
+    var dg = t.closest("[data-dg]");
+    if (dg) { var cur = gNum(k); if (cur === null) cur = k.base === "" ? 0 : +k.base; k.g = Math.max(0, cur + +dg.dataset.dg); $("#f-g").value = k.g; render(); return; }
+    if (id === "g-reset") { k.g = k.base; $("#f-g").value = k.g; render(); return; }
+    if (id === "abil-to-cards") { abilitiesToCards(k, +selId().split("-")[0]); return; }
+    var pc = t.closest(".pic-choice");
+    if (pc) { k.pic = k.pics[+pc.dataset.pic].url; render(); renderEditor(); return; }
+    var res = t.closest(".result");
+    if (res) pickBakugan(lastResults[+res.dataset.i].title);
+  });
+  /* Fill the brawler's empty Ability Cards (or all of them, if none has a name) with this Bakugan's abilities. */
+  function abilitiesToCards(k, b) {
+    var cards = state.brawlers[b].abilities, empty = cards.every(function (c) { return !c.name; }), n = 0;
+    k.known.forEach(function (a) {
+      var slot = cards.filter(function (c) { return !c.name; })[0];
+      if (!slot && empty && n < cards.length) slot = cards[n];
+      if (!slot) return;
+      slot.name = a.name; slot.effect = a.effect; slot.attr = k.attr; n++;
+    });
+    lookupMsg = '<p class="hint ok">✓ ' + n + " Ability Card" + (n === 1 ? "" : "s") + " filled in for " + esc(state.brawlers[b].name) + ".</p>";
+    render(); renderEditor();
+  }
+
+  /* ---------- Picture link checks ---------- */
+  function linkHint(url) {
+    if (/example\.com/i.test(url)) return "This is a placeholder link. Replace it with your own picture link.";
+    if (/^https?:\/\/(www\.|m\.)?imgur\.com\//i.test(url)) return "This is an Imgur page, not the picture. On Imgur, right-click the picture, choose “Copy image address”, and paste that (it starts with i.imgur.com).";
+    if (/fandom\.com\/wiki\//i.test(url)) return "This is a wiki page, not the picture. Look the Bakugan up instead, or open the picture on its own and copy that address.";
+    if (/static\.wikia\.nocookie\.net\/.*\/(revision|scale-to)/i.test(url)) return "Wiki picture links with “/revision/…” on the end don’t show on AO3. Click away from the box and the builder shortens it for you.";
+    if (/drive\.google\.com|dropbox\.com|onedrive|1drv\.ms/i.test(url)) return "Cloud drive links don’t show on AO3. Upload the picture to an image host instead.";
+    if (/discord(app)?\.(com|net)/i.test(url)) return "Discord links stop working after a while. Upload the picture to an image host instead.";
+    if (/^http:\/\//i.test(url)) return "Use a link that starts with https://, or some readers’ browsers will block it.";
+    if (url && !/^https:\/\//i.test(url)) return "A picture link should start with https://";
+    return "";
+  }
+  function checkPicture() {
+    var k = curBk(), st = $("#img-status"), th = $("#img-thumb");
+    if (!k || !st) return;
+    var url = String(k.pic || "").trim(), hint = linkHint(url);
+    th.hidden = true;
+    if (!url) { st.className = "hint"; st.textContent = ""; return; }
+    st.className = "hint"; st.textContent = "Checking the picture…";
+    var probe = new Image();
+    probe.onload = function () {
+      if (curBk() !== k || String(k.pic).trim() !== url) return;
+      st.className = hint ? "hint bad" : "hint ok";
+      st.textContent = "✓ Picture found (" + probe.naturalWidth + " × " + probe.naturalHeight + ")." + (hint ? " " + hint : "");
+      th.src = url; th.hidden = false;
+    };
+    probe.onerror = function () {
+      setTimeout(function () {
+        if (curBk() !== k || String(k.pic).trim() !== url) return;
+        st.className = "hint bad";
+        st.textContent = blocked.img ? "Can’t check pictures here. " + BLOCKED_TIP + (hint ? " " + hint : "")
+          : "✗ This link doesn’t open a picture. " + (hint || "Use a direct link: open the picture on its own, then copy that address. It usually ends in .png, .jpg or .gif.");
+      }, 150);
+    };
+    probe.src = url;
+  }
+
+  /* ---------- Blocked windows ---------- */
+  var blocked = { connect: false, img: false };
+  document.addEventListener("securitypolicyviolation", function (e) {
+    var d = e.effectiveDirective || e.violatedDirective || "";
+    if (/connect|default/.test(d)) blocked.connect = true;
+    if (/img|default/.test(d)) blocked.img = true;
+  });
+  var BLOCKED_TIP = "This window blocks other websites. Open this page in a web browser such as Firefox or Chrome.";
+  function netError(what) {
+    return blocked.connect ? what + " can’t reach the Bakugan Wiki from here. " + BLOCKED_TIP
+      : navigator.onLine === false ? "You seem to be offline. Reconnect and try again, or fill in the details yourself."
+      : "Couldn’t reach the Bakugan Wiki. Try again in a moment, or fill in the details yourself. If it keeps failing, a browser extension (like an ad blocker) may be blocking bakugan.fandom.com.";
+  }
+
+  /* ---------- Lookups (the Bakugan Wiki) ----------
+     The wiki runs MediaWiki, whose API answers other websites when asked with origin=*.
+     A Bakugan's page starts with an {{Infobox Bakugan |attribute = … |power = …}} box and
+     lists its anime abilities as "*'''Boosted Dragon''': Adds 100 Gs …" lines. */
+  var WIKI = "https://bakugan.fandom.com/api.php", jsonCache = {};
+  function wiki(params) {
+    params.format = "json"; params.formatversion = "2"; params.origin = "*";
+    var url = WIKI + "?" + new URLSearchParams(params).toString();
+    if (jsonCache[url]) return Promise.resolve(jsonCache[url]);
+    return fetch(url).then(function (r) {
+      if (!r.ok) { var err = new Error("http " + r.status); err.status = r.status; throw err; }
+      return r.json();
+    }).then(function (j) { if (j.error) throw new Error(j.error.info || "wiki error"); jsonCache[url] = j; return j; });
+  }
+  function stripWiki(s) {
+    var prev;
+    s = String(s || "");
+    do { prev = s; s = s.replace(/\{\{[^{}]*\}\}/g, ""); } while (s !== prev);
+    return s.replace(/<ref[^>]*\/>/gi, "").replace(/<ref[\s\S]*?<\/ref>/gi, "").replace(/<br\s*\/?>/gi, " ").replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, "$1")
+      .replace(/\[https?:[^\s\]]+\s*([^\]]*)\]/g, "$1").replace(/'{2,}/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  }
+  function pageText(p) { return p && p.revisions && p.revisions[0] ? (p.revisions[0].slots ? p.revisions[0].slots.main.content : p.revisions[0].content) || "" : ""; }
+  function catsOf(p) { return (p.categories || []).map(function (c) { return c.title.replace(/^Category:/, ""); }); }
+  /* Splits a template at its top-level bars, ignoring bars inside [[links]] and {{templates}}. */
+  function topSplit(s) {
+    var parts = [], d = 0, start = 0;
+    for (var k = 0; k < s.length; k++) {
+      var two = s.substr(k, 2);
+      if (two === "[[" || two === "{{") { d++; k++; } else if (two === "]]" || two === "}}") { d--; k++; }
+      else if (s[k] === "|" && d === 0) { parts.push(s.slice(start, k)); start = k + 1; }
+    }
+    parts.push(s.slice(start));
+    return parts;
+  }
+  /* The first {{Infobox …}} on a page, as { kind, key: value }. */
+  function infobox(t) {
+    var m = t.match(/\{\{\s*Infobox[ _]+([^|}\n]*)/i); if (!m) return null;
+    var i = m.index + 2, d = 1, j = i;
+    for (; j < t.length - 1 && d; j++) {
+      if (t[j] === "{" && t[j + 1] === "{") { d++; j++; } else if (t[j] === "}" && t[j + 1] === "}") { d--; j++; }
+    }
+    var parts = topSplit(t.slice(i, j - 2)), out = { kind: m[1].trim().toLowerCase() };
+    parts.slice(1).forEach(function (p) { var eq = p.indexOf("="); if (eq > 0) out[p.slice(0, eq).trim().toLowerCase()] = p.slice(eq + 1).trim(); });
+    return out;
+  }
+  function attrIn(s) { var m = String(s || "").toLowerCase().match(/\b(pyrus|aquos|subterra|haos|darkus|ventus)\b/); return m ? m[1] : ""; }
+  function firstNum(s) { var m = String(s || "").replace(/,/g, "").match(/\d+/); return m ? +m[0] : null; }
+  function isBakuganPage(p) { var c = catsOf(p); return c.indexOf("Bakugan") >= 0 || c.indexOf("Bakugan Species") >= 0; }
+  function isSeason1(p) { var c = catsOf(p); return c.indexOf("Season 1 Bakugan") >= 0 || c.indexOf("Bakugan Battle Brawlers") >= 0; }
+
+  function showLookup(html) { lookupMsg = html; if ($("#lookup-out")) $("#lookup-out").innerHTML = html; }
+  function doLookup() {
+    var q = ($("#f-look").value || "").trim();
+    if (q.length < 2) { showLookup('<p class="hint bad">Type at least 2 letters of the Bakugan’s name first.</p>'); return; }
+    showLookup('<p class="hint">Searching the wiki…</p>');
+    var key = sel;
+    wiki({ action: "query", generator: "search", gsrsearch: q, gsrlimit: "30", gsrnamespace: "0", prop: "categories", cllimit: "max", redirects: "1" }).then(function (j) {
+      if (sel !== key) return;
+      var pages = ((j.query && j.query.pages) || []).filter(isBakuganPage);
+      pages.sort(function (a, b) { return isSeason1(b) - isSeason1(a) || a.index - b.index; });
+      var base = function (t) { return t.replace(/\s*\(.*\)\s*$/, "").toLowerCase(); };
+      var exact = pages.filter(function (p) { return base(p.title) === q.toLowerCase(); });
+      if (exact.length === 1 || (exact.length > 1 && isSeason1(exact[0]) && !isSeason1(exact[1]))) { pickBakugan(exact[0].title); return; }
+      if (!pages.length) { showLookup('<p class="hint bad">No Bakugan on the wiki match “' + esc(q) + '”. Check the spelling, or fill in the details yourself.</p>'); return; }
+      lastResults = pages.slice(0, 15).map(function (p) {
+        var a = ""; catsOf(p).forEach(function (c) { if (!a && ATTRS.indexOf(c.toLowerCase()) >= 0) a = c; });
+        return { title: p.title, info: [isSeason1(p) ? "Battle Brawlers" : "", a].filter(Boolean).join(" · ") };
+      });
+      showLookup('<p class="hint">Pick the Bakugan:</p><div class="results">' + lastResults.map(function (d, i) {
+        return '<button type="button" class="result" data-i="' + i + '"><b>' + esc(d.title) + "</b><span>" + esc(d.info) + "</span></button>";
+      }).join("") + "</div>");
+    }).catch(function () { setTimeout(function () { showLookup('<p class="hint bad">' + netError("Look up") + "</p>"); }, 150); });
+  }
+  function pickBakugan(title) {
+    var k = curBk(), key = sel; if (!k) return;
+    showLookup('<p class="hint">Loading ' + esc(title) + "…</p>");
+    wiki({ action: "query", titles: title, prop: "revisions|categories|pageimages", rvprop: "content", rvslots: "main", cllimit: "max", piprop: "name", redirects: "1" }).then(function (j) {
+      var p = j.query && j.query.pages && j.query.pages[0];
+      if (!p || p.missing) { var err = new Error("missing"); err.status = 404; throw err; }
+      if (curBk() !== k || sel !== key) return;
+      applyBakugan(k, p);
+    }).catch(function (err) {
+      setTimeout(function () { showLookup('<p class="hint bad">' + (err && err.status ? "The wiki has no page called “" + esc(title) + "”." : netError("Look up")) + "</p>"); }, 150);
+    });
+  }
+  function abilitiesIn(t) {
+    var out = [], seen = {};
+    var re = /^=+\s*(?:Fusion\s+)?Ability Cards?\s*=+\s*$/gm, m, sections = 0;
+    while ((m = re.exec(t)) && sections < 2) {
+      sections++;
+      var rest = t.slice(m.index + m[0].length), end = rest.search(/^=/m), body = end >= 0 ? rest.slice(0, end) : rest;
+      body.split("\n").forEach(function (line) {
+        var x = line.match(/^\*\s*'''\s*(.+?)\s*'''\s*(?:\([^)]*\)\s*)*:\s*(.*)$/);
+        if (!x) return;
+        var name = stripWiki(x[1]).replace(/\s*-\s*$/, "");
+        if (!name || seen[name.toLowerCase()]) return;
+        seen[name.toLowerCase()] = 1; out.push({ name: name, effect: stripWiki(x[2]) });
+      });
+    }
+    return out;
+  }
+  function applyBakugan(k, p) {
+    var t = pageText(p), box = infobox(t) || {}, cats = catsOf(p);
+    var isNew = k.page !== p.title;
+    k.page = p.title;
+    k.name = stripWiki(box.name || "") || p.title.replace(/\s*\(.*\)\s*$/, "");
+    var a = attrIn(stripWiki(box.attribute || ""));
+    if (!a) cats.forEach(function (c) { if (!a && ATTRS.indexOf(c.toLowerCase()) >= 0) a = c.toLowerCase(); });
+    k.attr = a;
+    var power = firstNum(stripWiki(box.power || box.g || ""));
+    if (power) { k.base = power; k.g = power; }
+    k.known = abilitiesIn(t);
+    if (isNew || !k.abil) k.abil = k.known.map(function (x) { return x.name; }).join(", ");
+    if (isNew) k.notes = "";
+    lookupMsg = '<p class="hint ok">✓ Filled in ' + esc(k.name) + (power ? ", " + power + " G" : "") + "." +
+      (k.known.length ? " It has " + k.known.length + " abilit" + (k.known.length === 1 ? "y" : "ies") + " in the anime; they’re listed in its info panel." : "") + "</p>";
+    var img = box.image ? (box.image.match(/\[\[(?:File|Image):([^|\]]+)/i) || [])[1] : "";
+    fillDynamic(); render(); renderEditor();
+    loadPictures(k, t, img || p.pageimage);
+  }
+  function filesIn(t) {
+    var out = [], seen = {};
+    var add = function (name, capt) {
+      name = String(name || "").trim().replace(/_/g, " ");
+      if (!/\.(png|jpe?g|gif|webp)$/i.test(name) || seen[name.toLowerCase()]) return;
+      seen[name.toLowerCase()] = 1; out.push({ file: name, cap: stripWiki(capt || "") });
+    };
+    var re = /\[\[(?:File|Image):/gi, m;
+    while ((m = re.exec(t))) {
+      var i = m.index + 2, depth = 1, j = m.index + m[0].length;
+      for (; j < t.length - 1 && depth; j++) {
+        if (t[j] === "[" && t[j + 1] === "[") { depth++; j++; }
+        else if (t[j] === "]" && t[j + 1] === "]") { depth--; j++; }
+      }
+      var parts = topSplit(t.slice(i, j - 2).replace(/^(?:File|Image):/i, ""));
+      var opts = parts.slice(1).filter(function (x) { return !/^\s*(thumb|thumbnail|frame|frameless|border|right|left|center|centre|none|upright.*|\d+(x\d+)?px|link=.*|alt=.*)\s*$/i.test(x); });
+      add(parts[0], opts.pop());
+      re.lastIndex = j;
+    }
+    (t.match(/<gallery[^>]*>[\s\S]*?<\/gallery>/gi) || []).forEach(function (g) {
+      g.replace(/<\/?gallery[^>]*>/gi, "").split("\n").forEach(function (line) {
+        var bar = line.indexOf("|");
+        add((bar < 0 ? line : line.slice(0, bar)).replace(/^(?:File|Image):/i, ""), bar < 0 ? "" : line.slice(bar + 1));
+      });
+    });
+    return out;
+  }
+  function loadPictures(k, t, mainFile) {
+    var files = filesIn(t), main = String(mainFile || "").trim().replace(/_/g, " ");
+    var rank = function (f) { return f.file === main ? 0 : /\.gif$/i.test(f.file) ? 2 : 1; };
+    files = files.map(function (f, i) { f.i = i; return f; }).sort(function (a, b) { return rank(a) - rank(b) || a.i - b.i; }).slice(0, 30);
+    if (!files.length) { k.pics = []; return; }
+    wiki({ action: "query", titles: files.map(function (f) { return "File:" + f.file; }).join("|"), prop: "imageinfo", iiprop: "url|size" }).then(function (j) {
+      var norm = {}, byTitle = {};
+      ((j.query && j.query.normalized) || []).forEach(function (n) { norm[n.from] = n.to; });
+      ((j.query && j.query.pages) || []).forEach(function (p) { byTitle[p.title] = p; });
+      k.pics = files.map(function (f) {
+        var key = "File:" + f.file, p = byTitle[norm[key] || key], ii = p && p.imageinfo && p.imageinfo[0];
+        return ii ? { file: f.file, cap: f.cap, url: cleanWikiLink(ii.url) } : null;
+      }).filter(Boolean);
+      if (k.pics.length && !k.pics.some(function (x) { return x.url === k.pic; })) k.pic = k.pics[0].url;
+      render(); if (curBk() === k) renderEditor();
+    }).catch(function () { /* no picture choices; the link box still works */ });
+  }
+
+  /* Gate Cards and Ability Cards: {{Infobox Gate Card |type = Command |effect = …}} and
+     {{Infobox_Ability |ability effect = …}}; an ability's attribute is in its categories ("Pyrus Abilities"). */
+  function readCardPage(p) {
+    var t = pageText(p), box = infobox(t) || {}, cats = catsOf(p);
+    var isGate = /gate/.test(box.kind || "") || cats.some(function (c) { return /Gate Cards/.test(c); });
+    var isAbility = /abilit/.test(box.kind || "") || cats.some(function (c) { return /Abilities/.test(c); });
+    var effect = stripWiki(box.effect || box["ability effect"] || box["ability_effect"] || "");
+    if (!effect) { var e = t.match(/^==\s*Effect\s*==\s*$([\s\S]*?)(?=^==|$(?![\s\S]))/m); if (e) effect = stripWiki(e[1]).slice(0, 220); }
+    var type = String(stripWiki(box.type || "")).toLowerCase().split(/[\s/]/)[0];
+    if (!TYPE_NAME[type]) type = "";
+    var attr = ""; cats.forEach(function (c) { var m = c.match(/^(\w+) Abilities$/); if (!attr && m && ATTRS.indexOf(m[1].toLowerCase()) >= 0) attr = m[1].toLowerCase(); });
+    if (!attr) attr = attrIn(stripWiki(box["user (bakugan)"] || box.attribute || ""));
+    return { title: p.title.replace(/\s*\((?:Anime|Battle Brawlers)\)\s*$/, ""), isGate: isGate, isAbility: isAbility, effect: effect, type: type, attr: attr };
+  }
+  function lookupTitle(name) {
+    return wiki({ action: "query", titles: name, prop: "revisions|categories", rvprop: "content", rvslots: "main", cllimit: "max", redirects: "1" }).then(function (j) {
+      var p = j.query && j.query.pages && j.query.pages[0];
+      if (p && !p.missing) return p;
+      /* Not an exact title: try the search, which forgives capitals and small typos. */
+      return wiki({ action: "query", generator: "search", gsrsearch: name, gsrlimit: "5", gsrnamespace: "0", prop: "revisions|categories", rvprop: "content", rvslots: "main", cllimit: "max" }).then(function (j2) {
+        var ps = ((j2.query && j2.query.pages) || []).slice().sort(function (a, b) { return a.index - b.index; });
+        return ps.filter(function (x) { return catsOf(x).some(function (c) { return /Gate Cards|Abilities/.test(c); }); })[0] || null;
+      });
+    });
+  }
+  function cardStatus(cls, text) { cardMsg = text; var st = $("#card-status"); if (st) { st.className = "hint " + cls; st.textContent = text; } }
+  function lookupCard(row, i) {
+    if (row === "bakugan") return;
+    var b = +selId(), c = state.brawlers[b][row][i], name = (c.name || "").trim(), isGate = row === "gates";
+    if (!name) return;
+    cardStatus("", "Looking up " + name + "…");
+    lookupTitle(name).then(function (p) {
+      if (!p) { cardStatus("bad", "The wiki has no " + (isGate ? "Gate Card" : "Ability Card") + " called “" + name + "”. Fill in its details yourself."); return; }
+      var r = readCardPage(p);
+      if (isGate ? !r.isGate && !r.isAbility : !r.isAbility && !r.isGate) { cardStatus("bad", "“" + p.title + "” on the wiki isn’t a card. Fill in its details yourself."); return; }
+      if (c.name.trim() !== name) return;
+      c.name = r.title; if (r.effect) c.effect = r.effect;
+      if (isGate) { if (r.type) c.type = r.type; } else if (r.attr) c.attr = r.attr;
+      cardStatus("ok", "✓ " + r.title + (isGate && r.type ? ": " + TYPE_NAME[r.type] : !isGate && r.attr ? ": " + cap(r.attr) : "") + (r.effect ? ". " + r.effect : "."));
+      render(); if (selKind() === "br" && +selId() === b) renderEditor();
+    }).catch(function () { setTimeout(function () { cardStatus("bad", netError("Card look up")); }, 150); });
+  }
+  function lookupGateHere() {
+    var g = +selId(), x = gateOn(g); if (!x) return;
+    var name = ($("#g-name").value || "").trim(); if (!name) return;
+    x.c.name = name;
+    cardStatus("", "Looking up " + name + "…");
+    lookupTitle(name).then(function (p) {
+      if (!p) { cardStatus("bad", "The wiki has no Gate Card called “" + name + "”. Fill in its details yourself."); return; }
+      var r = readCardPage(p);
+      if (x.c.name !== name) return;
+      x.c.name = r.title; if (r.effect) x.c.effect = r.effect; if (r.type) x.c.type = r.type;
+      cardStatus("ok", "✓ " + r.title + (r.type ? ": " + TYPE_NAME[r.type] : "") + ".");
+      render(); if (sel === "gate:" + g) renderEditor();
+    }).catch(function () { setTimeout(function () { cardStatus("bad", netError("Card look up")); }, 150); });
+  }
+
+  /* ---------- Side panels ---------- */
+  each(document.querySelectorAll("[data-p]"), function (el) {
+    var evt = el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, function () {
+      var p = el.dataset.p, v = el.type === "checkbox" ? el.checked : el.value;
+      if (p === "round") v = clampInt(v, 0, 999);
+      if (p === "battleAt") v = parseInt(v, 10);
+      if (p === "gates") { v = clampInt(v, 1, 6); shrinkGates(v); }
+      state[p] = v;
+      if (p === "gates") { fillDynamic(); if (selKind() === "gate" && +selId() >= v) sel = null; renderEditor(); }
+      render();
+    });
+  });
+  /* With fewer spaces, cards and Bakugan on the removed spaces go back to their brawlers. */
+  function shrinkGates(n) {
+    state.brawlers.forEach(function (br) {
+      br.gates.forEach(function (c) { if ((c.state === "set" || c.state === "open") && c.at >= n) c.state = "hand"; });
+      br.bakugan.forEach(function (k) { if (k.status === "field" && k.at >= n) k.status = "hand"; });
+    });
+    if (state.battleAt >= n) state.battleAt = -1;
+  }
+  brawlersEl.addEventListener("input", function (e) {
+    var el = e.target; if (!el.dataset.bname) return;
+    state.brawlers[+el.dataset.bname].name = el.value;
+    render(); fillDynamic();
+  });
+  brawlersEl.addEventListener("change", function (e) {
+    var el = e.target;
+    if (el.hasAttribute("data-mode")) state.mode = el.value;
+    else if (el.hasAttribute("data-royale")) state.royaleN = +el.value;
+    else return;
+    if (sel && /^(bk|br):/.test(sel) && !isActive(+selId().split("-")[0])) sel = null;
+    fillInputs(); render(); renderEditor();
+    var again = brawlersEl.querySelector('input[value="' + el.value + '"]'); if (again) again.focus();
+  });
+  brawlersEl.addEventListener("click", function (e) { var b = e.target.closest("[data-editbr]"); if (b) select("br:" + b.dataset.editbr); });
+  each(document.querySelectorAll("[data-l]"), function (el) {
+    el.addEventListener(el.tagName === "SELECT" ? "change" : "input", function () {
+      var k = el.dataset.l;
+      state.log[k] = k === "delta" ? (parseInt(el.value, 10) || 0) : el.value;
+      render();
+    });
+  });
+  $("#apply-log").addEventListener("click", function () {
+    var x = logResult();
+    if (!x) { flash($("#log-status"), "Pick whose G-Power changes first."); return; }
+    if (x.after !== null) x.k.g = x.after;
+    if (state.log.outcome === "out" || state.log.outcome === "doom") x.k.status = state.log.outcome;
+    fillDynamic(); render(); if (sel) renderEditor();
+    flash($("#log-status"), "Updated on the board.");
+  });
+  /* Message buttons: each adds a line, naming the card where it can. */
+  each(document.querySelectorAll("[data-say]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var w = btn.dataset.say, line = SAY[w];
+      if (w === "open") { var x = state.battleAt >= 0 ? gateOn(state.battleAt) : null; if (x && x.c.name) line += " " + x.c.name + "!"; }
+      if (w === "ability") { var name = ""; active().some(function (b) { return state.brawlers[b].abilities.some(function (c) { if (c.state === "active" && c.name) { name = c.name; return true; } return false; }); }); if (name) line += " " + name + "!"; }
+      state.msg = (state.msg ? state.msg.replace(/\s+$/, "") + "\n" : "") + line;
+      $("#msg").value = state.msg; render();
+    });
+  });
+
+  /* Clicking the preview: a Bakugan or a ball opens it; a Gate Card space opens it; a plate or hand opens the brawler. */
+  preview.addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.closest(".bkg-sum")) return;
+    var bk = t.closest("[data-bk]"); if (bk) { select("bk:" + bk.dataset.bk); return; }
+    var g = t.closest("[data-gate]"); if (g) { select("gate:" + g.dataset.gate); return; }
+    var br = t.closest("[data-br]"); if (br) { select("br:" + br.dataset.br); return; }
+    if (t.closest("[data-msg]")) $("#msg").focus();
+  });
+  preview.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var t = e.target, bk = t.closest("[data-bk]"), g = t.closest("[data-gate]"), br = t.closest("[data-br]");
+    if (bk || g || br) { e.preventDefault(); select(bk ? "bk:" + bk.dataset.bk : g ? "gate:" + g.dataset.gate : "br:" + br.dataset.br); }
+    else if (t.closest("[data-msg]")) { e.preventDefault(); $("#msg").focus(); }
+  });
+
+  /* ---------- Copy, load, clear ---------- */
+  function flash(el, msg) { el.textContent = msg; clearTimeout(el._t); el._t = setTimeout(function () { el.textContent = ""; }, 2600); }
+  function copy(text, ta, status) {
+    var fallback = function () {
+      if (ta) { ta.focus(); ta.select(); }
+      var ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      flash(status, ok ? "Copied." : "Selected: press Ctrl+C (or ⌘C) to copy.");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { flash(status, "Copied."); }, fallback);
+    else fallback();
+  }
+  /* The meter width classes are written out here instead of by hand: bkg-w0 … bkg-w100. */
+  var widthRules = [];
+  for (var w = 0; w <= 100; w += 5) {
+    var line = [];
+    for (var n = w; n < w + 5 && n <= 100; n++) line.push(".bkg-w" + n + " { width: " + n + "%; }");
+    widthRules.push(line.join(" "));
+  }
+  var RAW_SKIN = $("#skin-css").textContent.trim() + "\n" + widthRules.join("\n") + "\n";
+  $("#skin-out").value = RAW_SKIN;
+  $("#copy-skin").addEventListener("click", function () { var d = $("#skin-out").closest("details"); copy(RAW_SKIN, d.open ? $("#skin-out") : null, $("#skin-status")); });
+  $("#copy-board").addEventListener("click", function () { copy(boardOut.value, boardOut, $("#board-status")); });
+  $("#copy-log").addEventListener("click", function () { copy(logHTML(), null, $("#log-status")); });
+  $("#load-btn").addEventListener("click", function () {
+    var st = $("#load-status"), before = state;
+    try {
+      state = parseBoard($("#load-in").value);
+      state.log = Object.assign({}, before.log, { target: state.log.target });   /* keep the log line you were writing */
+      sel = null; lookupMsg = ""; fillInputs(); render(); renderEditor();
+      st.className = "hint ok"; st.textContent = "Loaded.";
+    } catch (e) {
+      state = before;
+      st.className = "hint bad"; st.textContent = "That doesn’t look like a board from this builder. Paste the whole code, from the first <div class=\"bkg-brawl\"> to the end.";
+    }
+  });
+  $("#example-btn").addEventListener("click", function () { state = exampleState(); sel = null; lookupMsg = ""; fillInputs(); render(); renderEditor(); });
+  var clearBtn = $("#clear-btn");
+  clearBtn.addEventListener("click", function () {
+    if (clearBtn.dataset.armed) {
+      delete clearBtn.dataset.armed; clearBtn.textContent = "Clear the brawl";
+      state = emptyState(); sel = null; lookupMsg = ""; fillInputs(); render(); renderEditor();
+      return;
+    }
+    clearBtn.dataset.armed = "1"; clearBtn.textContent = "Click again to clear";
+    setTimeout(function () { if (clearBtn.dataset.armed) { delete clearBtn.dataset.armed; clearBtn.textContent = "Clear the brawl"; } }, 3500);
+  });
+
+  /* ---------- Preview uses the real Work Skin, scoped like AO3 does ---------- */
+  var scoped = RAW_SKIN.replace(/\/\*[\s\S]*?\*\//g, "").replace(/([^{}]+)\{/g, function (m, sels) {
+    return sels.split(",").map(function (x) { return "#workskin " + x.trim(); }).join(", ") + " {";
+  });
+  var style = document.createElement("style"); style.textContent = scoped; document.head.appendChild(style);
+  var logStyle = document.createElement("style"); logStyle.textContent = scoped.replace(/#workskin /g, "#workskin-log "); document.head.appendChild(logStyle);
+
+  fillInputs(); render(); renderEditor();
+})();
+</script>
+
+</body>
+</html>
